@@ -1,0 +1,2164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Clinical Product Predictor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f4f2ee; --panel:#ffffff; --panel-2:#faf9f6; --ink:#16181c; --ink-2:#4a4f58;
+  --ink-3:#7b828d; --line:#e0ddd6; --line-2:#cfcbc2;
+  --accent:#1d4ed8; --accent-soft:#e6ecfd;
+  --pos:#15736a; --warn:#b4601a; --neg:#a52b28;
+  --grid:#e8e5de;
+  --serif:"Newsreader",Georgia,serif;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#101215; --panel:#191c21; --panel-2:#1f232a; --ink:#eceef2; --ink-2:#a9b1bd;
+    --ink-3:#7c8492; --line:#2a2f37; --line-2:#3a414b;
+    --accent:#7da2ff; --accent-soft:#1e2a44;
+    --pos:#4fd1b8; --warn:#e0a45e; --neg:#f08b86; --grid:#252a31;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#101215; --panel:#191c21; --panel-2:#1f232a; --ink:#eceef2; --ink-2:#a9b1bd;
+  --ink-3:#7c8492; --line:#2a2f37; --line-2:#3a414b;
+  --accent:#7da2ff; --accent-soft:#1e2a44;
+  --pos:#4fd1b8; --warn:#e0a45e; --neg:#f08b86; --grid:#252a31;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1180px;margin:0 auto;padding:0 20px 72px}
+a{color:var(--accent)}
+
+/* header */
+header{padding:26px 0 18px}
+.brandrow{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.brand{font-family:var(--mono);font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);font-weight:600}
+.brand-sub{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;color:var(--ink-3)}
+h1{font-family:var(--serif);font-weight:400;font-size:clamp(30px,4.4vw,46px);line-height:1.08;margin:0 0 6px;letter-spacing:-.015em}
+h1 em{font-style:italic;color:var(--ink-2)}
+.sub{color:var(--ink-2);max-width:62ch;margin:0 0 16px}
+.meta{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}
+.chip{font-family:var(--mono);font-size:11px;letter-spacing:.04em;border:1px solid var(--line-2);border-radius:999px;padding:4px 11px;color:var(--ink-2);background:var(--panel)}
+.chip.on{background:var(--accent-soft);border-color:transparent;color:var(--accent);font-weight:600}
+
+/* tab nav */
+.tabnav{position:sticky;top:0;z-index:20;background:var(--bg);padding:8px 0 10px;margin-bottom:22px;
+  display:flex;gap:6px;flex-wrap:wrap;border-bottom:1px solid var(--line)}
+.navtab{appearance:none;background:var(--panel);border:1px solid var(--line);border-radius:8px;
+  font-family:var(--sans);font-size:13.5px;font-weight:500;color:var(--ink-2);
+  padding:9px 15px;cursor:pointer;display:flex;align-items:baseline;gap:8px;white-space:nowrap;
+  transition:background .15s,border-color .15s,color .15s}
+.navtab:hover{border-color:var(--line-2);color:var(--ink)}
+.navtab[aria-selected=true]{background:var(--accent-soft);border-color:transparent;color:var(--accent);font-weight:600}
+.navtab.pred{background:var(--panel-2);border-color:var(--line-2)}
+.navtab.pred .pn{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--accent)}
+.navtab.pred[aria-selected=true]{background:var(--accent);border-color:var(--accent);color:#fff}
+.navtab.pred[aria-selected=true] .pn{color:#fff}
+@media (max-width:700px){
+  .tabnav{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  .tabnav::-webkit-scrollbar{display:none}
+  .navtab{padding:8px 12px;font-size:13px}
+}
+.panel[hidden]{display:none}
+
+/* asset context strip — shown on asset-dependent tabs only */
+.ctx{display:flex;align-items:center;gap:14px;flex-wrap:wrap;background:var(--accent-soft);border:1px solid transparent;border-radius:10px;padding:11px 16px;margin:-8px 0 26px}
+.ctx[hidden]{display:none}
+.ctx .ctx-l{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);font-weight:600}
+.ctx .ctx-name{font-family:var(--serif);font-size:19px;letter-spacing:-.01em;color:var(--ink)}
+.ctx .ctx-name em{font-style:italic;color:var(--ink-2)}
+.ctx .ctx-desc{font-size:12.5px;color:var(--ink-2)}
+.ctx .ctx-chips{display:flex;gap:6px;flex-wrap:wrap;margin-left:auto}
+.ctx .chip{background:var(--panel);font-size:10.5px;padding:3px 9px}
+.ctx .swap{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;background:none;border:1px solid var(--accent);color:var(--accent);border-radius:6px;padding:5px 10px;cursor:pointer}
+.ctx .swap:hover{background:var(--accent);color:#fff}
+@media (max-width:840px){.ctx .ctx-chips{margin-left:0}}
+
+/* no-asset placeholder */
+body:not(.has-asset) .needs-asset{display:none}
+body.has-asset .noasset{display:none}
+.noasset{background:var(--panel);border:1px dashed var(--line-2);border-radius:10px;padding:34px 24px;text-align:center;color:var(--ink-2);font-size:14px}
+.noasset h3{font-family:var(--serif);font-weight:500;font-size:21px;margin:0 0 8px;color:var(--ink)}
+.noasset p{margin:0 auto 16px;max-width:52ch}
+
+/* section */
+section{margin:34px 0}
+section:first-child{margin-top:0}
+h2{font-family:var(--serif);font-weight:500;font-size:21px;margin:0 0 4px;letter-spacing:-.01em}
+.lede{color:var(--ink-3);font-size:13.5px;margin:0 0 16px;max-width:76ch}
+.rule{height:1px;background:var(--line);margin:0 0 16px}
+.eyebrow{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);margin-bottom:9px}
+
+/* lookup — combobox */
+.combo{position:relative;margin-bottom:10px}
+.combo input{width:100%;font-family:var(--sans);font-size:16px;padding:14px 52px 14px 18px;border:1px solid var(--line-2);border-radius:10px;background:var(--panel);color:var(--ink);outline:none}
+.combo input::placeholder{color:var(--ink-3)}
+.combo input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.combo-toggle{position:absolute;right:6px;top:6px;bottom:6px;width:40px;border:0;border-left:1px solid var(--line);background:none;color:var(--ink-3);font-size:16px;cursor:pointer;border-radius:0 8px 8px 0}
+.combo-toggle:hover{color:var(--accent)}
+.combo[aria-expanded=true] .combo-toggle{color:var(--accent)}
+.combo-menu{position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:30;margin:0;padding:6px;list-style:none;
+  background:var(--panel);border:1px solid var(--line-2);border-radius:10px;box-shadow:0 12px 32px rgba(0,0,0,.12);max-height:340px;overflow-y:auto}
+.combo-menu[hidden]{display:none}
+.combo-item{display:flex;align-items:center;gap:14px;padding:11px 14px;border-radius:7px;cursor:pointer}
+.combo-item:hover,.combo-item[aria-selected=true]{background:var(--accent-soft)}
+.combo-item .ci-name{font-family:var(--serif);font-size:18px;letter-spacing:-.01em;color:var(--ink);white-space:nowrap}
+.combo-item .ci-name em{font-style:italic;color:var(--ink-2)}
+.combo-item .ci-desc{font-size:12.5px;color:var(--ink-2);line-height:1.4;flex:1;min-width:0}
+.combo-item .ci-desc small{display:block;font-family:var(--mono);font-size:10.5px;color:var(--ink-3);margin-top:2px}
+.combo-item .ci-phase{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);background:var(--panel-2);border:1px solid var(--line);border-radius:999px;padding:3px 9px;white-space:nowrap}
+.combo-item.none{cursor:default;color:var(--ink-3);font-size:13px}
+.combo-item.none:hover{background:none}
+@media (max-width:600px){.combo-item{flex-wrap:wrap;gap:6px}.combo-item .ci-phase{order:3}}
+.registry{font-size:12px;color:var(--ink-3);margin-bottom:6px}
+.notfound{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--neg);border-radius:10px;padding:18px 20px;font-size:14px;color:var(--ink-2)}
+.notfound b{color:var(--ink)}
+.idgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.idcell{background:var(--panel);padding:13px 16px}
+.idcell .l{font-family:var(--mono);font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--ink-3);margin-bottom:5px}
+.idcell .v{font-size:14px;font-weight:500;line-height:1.4}
+.idcell .v small{display:block;font-size:11.5px;color:var(--ink-3);font-weight:400;margin-top:2px}
+.conf{display:inline-block;font-family:var(--mono);font-size:9px;letter-spacing:.08em;text-transform:uppercase;border-radius:4px;padding:1px 6px;vertical-align:middle;margin-left:6px}
+.conf.sourced{background:var(--accent-soft);color:var(--accent)}
+.conf.inferred{background:color-mix(in srgb,var(--warn) 14%,transparent);color:var(--warn)}
+.conf.unresolved{background:var(--grid);color:var(--ink-3)}
+
+/* resolved-data cards */
+.res{display:grid;gap:14px}
+.rescard{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px 6px}
+.reshead{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+.reshead .dom{font-family:var(--mono);font-size:10.5px;letter-spacing:.11em;text-transform:uppercase;font-weight:600;color:var(--ink)}
+.reshead .srcs{font-size:12px;color:var(--ink-3)}
+.reshead .feeds{font-family:var(--mono);font-size:10px;letter-spacing:.06em;color:var(--accent);margin-left:auto}
+table.res-t{min-width:640px;font-size:12.5px}
+table.res-t th,table.res-t td{text-align:left;vertical-align:top;padding:9px 10px}
+table.res-t tbody td{font-family:var(--sans);font-size:12.5px;color:var(--ink-2);line-height:1.5}
+table.res-t tbody td:first-child{color:var(--ink);font-weight:500;width:200px}
+table.res-t td.srcc{white-space:nowrap;font-size:11.5px;width:150px}
+table.res-t td.srcc a{color:var(--accent);text-decoration:none;border-bottom:1px dotted var(--accent)}
+table.res-t td.cc{width:90px;text-align:right}
+table.res-t tr:last-child td{border-bottom:none}
+.res-legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--ink-3);margin:0 0 14px}
+.status{font-family:var(--mono);font-size:11px;white-space:nowrap}
+.status::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px;background:var(--ink-3);vertical-align:middle}
+.status.done::before{background:var(--pos)}
+.status.live::before{background:var(--accent)}
+.status.plan::before{background:var(--warn)}
+.geo .bar .top span:last-child{font-weight:600}
+.sponsor{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
+.sponsor:last-child{border-bottom:none}
+.sponsor .sn{font-size:13.5px;font-weight:600}
+.sponsor .sr{font-size:11.5px;color:var(--ink-3);display:block;font-weight:400;margin-top:2px}
+.sponsor .sc{font-family:var(--mono);font-size:12.5px;white-space:nowrap}
+
+/* asset map */
+.filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.filters .flab{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);margin-right:2px}
+.fchip{font-family:var(--mono);font-size:11px;border:1px solid var(--line-2);background:var(--panel);border-radius:999px;padding:4px 11px;color:var(--ink-2);cursor:pointer;display:inline-flex;align-items:center;gap:7px}
+.fchip .sw{width:9px;height:9px;border-radius:50%;display:inline-block}
+.fchip[aria-pressed=true]{background:var(--ink);color:var(--panel);border-color:var(--ink)}
+.fchip[aria-pressed=false]{opacity:.55}
+.fsep{width:1px;height:18px;background:var(--line-2);margin:0 4px}
+.map-wrap{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.map-wrap svg{display:block;width:100%;height:auto;cursor:grab;user-select:none;-webkit-user-select:none;touch-action:none;background:var(--panel)}
+.map-wrap svg.dragging{cursor:grabbing}
+.land{fill:var(--grid);stroke:var(--line-2);stroke-width:.5;stroke-linejoin:round}
+.grat{stroke:var(--line);stroke-width:.35;fill:none}
+.mk{cursor:pointer}
+.mk .dot{stroke:var(--panel);stroke-width:1.4}
+.mk.dim{opacity:.15;pointer-events:none}
+.mk.sel .dot{stroke:var(--ink);stroke-width:2.2}
+.mk.multi .dot{fill:none;stroke-dasharray:3 2;stroke-width:1.6}
+.mk .halo{fill:none;opacity:.35}
+.mk text{font-family:var(--mono);font-size:8px;fill:var(--ink-2);pointer-events:none}
+.mapctl{position:absolute;top:10px;right:10px;display:flex;flex-direction:column;gap:4px}
+.mapctl button{width:30px;height:30px;border:1px solid var(--line-2);background:var(--panel);border-radius:6px;cursor:pointer;font-family:var(--mono);font-size:15px;color:var(--ink-2);line-height:1}
+.mapctl button:hover{border-color:var(--accent);color:var(--accent)}
+.tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--panel);font-size:12px;padding:8px 11px;border-radius:6px;max-width:280px;line-height:1.45;z-index:5;display:none;box-shadow:0 6px 18px rgba(0,0,0,.18)}
+.tip b{display:block;font-size:12.5px;margin-bottom:2px}
+.tip .sw{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:middle}
+.tip small{display:block;opacity:.75;margin-top:3px}
+.map-note{font-size:11.5px;color:var(--ink-3);margin-top:8px;line-height:1.45}
+.maplegend{position:absolute;left:10px;bottom:10px;display:flex;gap:10px;flex-wrap:wrap;background:color-mix(in srgb,var(--panel) 88%,transparent);border:1px solid var(--line);border-radius:6px;padding:5px 9px;font-size:11px;color:var(--ink-2)}
+.maplegend .key .sw{border-radius:50%}
+@media (max-width:700px){.maplegend{position:static;border:0;border-top:1px solid var(--line);border-radius:0;background:var(--panel);padding:8px 12px}}
+.mk .cnt{font-family:var(--mono);font-size:7.5px;font-weight:600;fill:#fff;text-anchor:middle;pointer-events:none}
+.mk.faded{opacity:.35}
+.mk.multi .cnt{fill:var(--accent)}
+.maplegend .key .sw{display:inline-block;width:10px;height:10px}
+.filters input{font-family:var(--sans);font-size:12.5px;padding:5px 11px;border:1px solid var(--line-2);border-radius:999px;background:var(--panel);color:var(--ink);outline:none;min-width:220px}
+.filters input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.crumb{font-family:var(--mono);font-size:11.5px;color:var(--ink-3);margin-bottom:10px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.crumb b{color:var(--ink);font-weight:600}
+.crumb .arrow{color:var(--line-2)}
+.crumb button{font-family:var(--mono);font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;background:none;border:1px solid var(--line-2);color:var(--ink-2);border-radius:5px;padding:3px 8px;cursor:pointer;margin-left:auto}
+.drill{display:grid;grid-template-columns:1fr 1fr 1.2fr;gap:12px}
+@media (max-width:840px){.drill{grid-template-columns:1fr}}
+.dcol{background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden;display:flex;flex-direction:column;min-height:240px}
+.dhead{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink);font-weight:600;padding:11px 14px;border-bottom:1px solid var(--line);background:var(--panel-2)}
+.dhead span{color:var(--ink-3);font-weight:400;letter-spacing:.06em;text-transform:none;margin-left:6px}
+.dlist{list-style:none;margin:0;padding:6px;max-height:420px;overflow-y:auto}
+.ditem{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 10px;border-radius:7px;cursor:pointer;border:1px solid transparent}
+.ditem:hover{background:var(--panel-2)}
+.ditem[aria-selected=true]{background:var(--accent-soft);border-color:transparent}
+.ditem .dn{font-size:13px;font-weight:600;color:var(--ink);display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.ditem .dn small{font-weight:400;color:var(--ink-3);font-size:11.5px}
+.ditem .dm{font-size:11.5px;color:var(--ink-3);margin-top:2px;line-height:1.4}
+.ditem .dc{font-family:var(--mono);font-size:11px;color:var(--ink-2);white-space:nowrap;text-align:right}
+.ditem .dc b{display:block;font-size:13px;color:var(--ink)}
+.dlist .dempty{font-size:12.5px;color:var(--ink-3);padding:14px 10px;line-height:1.5}
+.pdot{display:inline-block;width:8px;height:8px;border-radius:50%}
+.ddetail{margin-top:12px;background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:10px;padding:16px 18px}
+.ddetail h3{font-family:var(--serif);font-weight:500;font-size:19px;margin:0 0 4px}
+.ddetail h3 em{font-style:italic;color:var(--ink-2)}
+.ddetail .dsub{font-size:12.5px;color:var(--ink-3);margin-bottom:12px}
+.ddetail .idgrid{margin-bottom:12px}
+.map-empty{font-size:13px;color:var(--ink-3);padding:6px 0 4px}
+.mtrial{padding:10px 0;border-bottom:1px solid var(--line)}
+.mtrial:last-child{border-bottom:none}
+.mtrial .t1{display:flex;justify-content:space-between;gap:10px;align-items:baseline;font-size:13px;font-weight:600}
+.mtrial .t1 .ph{font-family:var(--mono);font-size:10.5px;color:var(--accent);white-space:nowrap}
+.mtrial .t2{font-size:12px;color:var(--ink-2);margin-top:2px;line-height:1.45}
+.mtrial .t3{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);margin-top:3px}
+.masset{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
+.masset:last-child{border-bottom:none}
+.masset .an{font-size:13.5px;font-weight:600;display:flex;align-items:center;gap:8px}
+.masset .an .sw{width:10px;height:10px;border-radius:50%;display:inline-block}
+.masset .as{font-size:11.5px;color:var(--ink-3);display:block;font-weight:400;margin-top:2px}
+.masset .ac{font-family:var(--mono);font-size:11.5px;color:var(--ink-2);white-space:nowrap;text-align:right}
+.masset .reg{font-family:var(--mono);font-size:9px;letter-spacing:.08em;text-transform:uppercase;background:var(--accent-soft);color:var(--accent);border-radius:4px;padding:1px 6px}
+.mini{font-family:var(--mono);font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;background:none;border:1px solid var(--line-2);color:var(--ink-2);border-radius:5px;padding:4px 9px;cursor:pointer;white-space:nowrap}
+.mini:hover{border-color:var(--accent);color:var(--accent)}
+
+/* hero verdict */
+.hero{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:10px;padding:20px 22px}
+.hero h2{font-size:25px;margin:0 0 9px}
+.hero p{margin:0;color:var(--ink-2);font-size:14px;max-width:80ch}
+
+/* tiles */
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(178px,1fr));gap:12px}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:15px 16px 14px}
+.tile .lab{font-family:var(--mono);font-size:10px;letter-spacing:.11em;text-transform:uppercase;color:var(--ink-3);margin-bottom:9px;line-height:1.35}
+.tile .val{font-family:var(--mono);font-size:29px;font-weight:600;letter-spacing:-.025em;line-height:1}
+.tile .note{font-size:11.5px;color:var(--ink-3);margin-top:7px;line-height:1.4}
+.tile.hero-t{background:var(--accent-soft);border-color:transparent}
+.tile.hero-t .val{color:var(--accent)}
+.tiles.big{grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.tiles.big .tile{padding:22px 24px 20px}
+.tiles.big .tile .lab{font-size:11px;margin-bottom:12px}
+.tiles.big .tile .val{font-size:clamp(40px,6vw,58px)}
+.tiles.big .tile .note{font-size:13px;margin-top:10px;color:var(--ink-2)}
+
+/* controls */
+.controls{background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:16px 18px;display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:18px}
+.ctl label{display:flex;justify-content:space-between;align-items:baseline;font-size:12.5px;color:var(--ink-2);margin-bottom:7px;gap:10px}
+.ctl label b{font-family:var(--mono);font-size:12.5px;color:var(--ink);font-weight:600}
+input[type=range]{width:100%;accent-color:var(--accent);height:20px}
+.ctl .hint{font-size:11px;color:var(--ink-3);margin-top:5px;line-height:1.4}
+.reset{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;background:none;border:1px solid var(--line-2);color:var(--ink-2);border-radius:6px;padding:6px 12px;cursor:pointer}
+.reset:hover{border-color:var(--accent);color:var(--accent)}
+.ctl-reset{display:flex;flex-direction:column;justify-content:center;align-items:flex-start}
+
+/* two col */
+.cols{display:grid;grid-template-columns:1.05fr .95fr;gap:22px}
+.cols.even{grid-template-columns:1fr 1fr}
+@media (max-width:840px){.cols,.cols.even{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px 20px}
+.card h3{font-family:var(--sans);font-size:12.5px;font-weight:600;letter-spacing:.02em;margin:0 0 3px}
+.card .cap{font-size:11.5px;color:var(--ink-3);margin:0 0 14px;line-height:1.45}
+
+/* metric rows */
+.mrow{display:flex;justify-content:space-between;align-items:baseline;gap:14px;padding:9px 0;border-bottom:1px solid var(--line)}
+.mrow:last-of-type{border-bottom:none}
+.mrow .ml{font-size:13px;color:var(--ink-2)}
+.mrow .mv{font-family:var(--mono);font-size:15px;font-weight:600;white-space:nowrap}
+.jump{margin-top:14px;font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;
+  background:none;border:1px solid var(--line-2);color:var(--ink-2);border-radius:6px;padding:7px 13px;cursor:pointer}
+.jump:hover{border-color:var(--accent);color:var(--accent)}
+.jump.primary{background:var(--ink);color:var(--panel);border-color:var(--ink)}
+.jump.primary:hover{background:var(--accent);border-color:var(--accent);color:#fff}
+
+/* signal bars */
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.tab{font-size:11.5px;font-family:var(--mono);letter-spacing:.02em;border:1px solid var(--line-2);background:var(--panel);color:var(--ink-2);border-radius:6px;padding:5px 10px;cursor:pointer}
+.tab[aria-selected=true]{background:var(--ink);color:var(--panel);border-color:var(--ink)}
+.bars{display:flex;flex-direction:column;gap:11px}
+.bar .top{display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:5px;gap:12px}
+.bar .top span:last-child{font-family:var(--mono);font-weight:600}
+.track{height:7px;background:var(--grid);border-radius:4px;overflow:hidden}
+.fill{height:100%;background:var(--accent);border-radius:4px;transition:width .35s cubic-bezier(.3,.7,.3,1)}
+.fill.inv{background:var(--warn)}
+.bar .why{font-size:11px;color:var(--ink-3);margin-top:5px;line-height:1.45}
+
+/* table */
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{border-collapse:collapse;width:100%;min-width:620px;font-size:13.5px}
+th,td{text-align:right;padding:9px 12px;border-bottom:1px solid var(--line)}
+th:first-child,td:first-child{text-align:left}
+thead th{font-family:var(--mono);font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3);font-weight:500;border-bottom:1px solid var(--line-2)}
+tbody td{font-family:var(--mono);font-size:13px}
+tbody td:first-child{font-family:var(--sans);font-size:13.5px}
+tbody tr.tot td{border-bottom:none;font-weight:600;background:var(--panel-2)}
+.stage{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);display:block;font-weight:400}
+table.left th,table.left td{text-align:left;vertical-align:top}
+table.left tbody td{font-family:var(--sans);font-size:12.5px;color:var(--ink-2)}
+table.left tbody td:first-child{color:var(--ink);font-weight:500}
+table.left tbody td .m{font-family:var(--mono);font-size:12px;color:var(--ink)}
+table.left tbody td .sub2{display:block;font-size:11.5px;color:var(--ink-3);margin-top:2px;line-height:1.4}
+table.trials{min-width:960px}
+
+/* data architecture table */
+table.arch{min-width:880px;font-size:12.5px}
+table.arch th,table.arch td{text-align:left;vertical-align:top;padding:10px 12px;border-bottom:1px solid var(--line)}
+table.arch td.dom{font-family:var(--mono);font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--ink);font-weight:600;background:var(--panel-2);border-right:1px solid var(--line);width:132px}
+table.arch td.dom .feeds{display:block;margin-top:7px;font-size:9.5px;letter-spacing:.08em;color:var(--ink-3);font-weight:400}
+table.arch td.src{font-size:12.5px;font-weight:600;border-right:1px solid var(--line);width:180px}
+table.arch td.src .geo{display:block;font-family:var(--mono);font-size:10px;letter-spacing:.05em;color:var(--ink-3);font-weight:400;margin-top:4px}
+table.arch td.src.opt{font-weight:400;color:var(--ink-2)}
+table.arch td.src.opt em{font-style:normal;font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--warn)}
+table.arch td.cat{font-family:var(--sans);font-size:12.5px;font-weight:500;width:190px;border-right:1px solid var(--line)}
+table.arch td.att{color:var(--ink-2);font-size:12px;line-height:1.5}
+table.arch tr.groupstart td{border-top:1px solid var(--line-2)}
+
+/* pipeline */
+.pipe{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.step{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:15px 16px;position:relative}
+.step .num{font-family:var(--mono);font-size:10px;letter-spacing:.12em;color:var(--accent);margin-bottom:8px}
+.step h4{font-family:var(--sans);font-size:13px;font-weight:600;margin:0 0 5px}
+.step p{margin:0;font-size:12px;color:var(--ink-3);line-height:1.5}
+
+/* formula */
+.formula{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:14px 16px;
+  font-family:var(--mono);font-size:12.5px;color:var(--ink-2);line-height:1.9;overflow-x:auto}
+.formula b{color:var(--ink);font-weight:600}
+.formula .c{color:var(--accent)}
+
+/* chart */
+svg{display:block;width:100%;height:auto}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:11.5px;color:var(--ink-2);margin-top:10px}
+.key{display:inline-flex;align-items:center;gap:6px}
+.sw{width:11px;height:11px;border-radius:3px;display:inline-block}
+
+/* verdict */
+.verdict{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--warn);border-radius:10px;padding:18px 20px}
+.verdict h3{font-family:var(--serif);font-weight:500;font-size:17px;margin:0 0 8px}
+.verdict p{margin:0 0 10px;font-size:14px;color:var(--ink-2)}
+.verdict p:last-child{margin-bottom:0}
+.vgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:14px 0 4px}
+.vcell{background:var(--panel-2);border-radius:8px;padding:11px 13px}
+.vcell .l{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);margin-bottom:5px}
+.vcell .v{font-family:var(--mono);font-size:18px;font-weight:600}
+
+/* provenance */
+.prov{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.pcell{background:var(--panel);padding:14px 16px}
+.pcell .dom{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:7px}
+.pcell .src{font-size:12.5px;font-weight:600;margin-bottom:3px}
+.pcell .fed{font-size:11.5px;color:var(--ink-3);line-height:1.45}
+
+ul.clean{margin:0;padding-left:18px;font-size:13.5px;color:var(--ink-2)}
+ul.clean li{margin-bottom:7px}
+ul.clean b{color:var(--ink);font-weight:600}
+footer{margin-top:44px;padding-top:18px;border-top:1px solid var(--line);font-size:11.5px;color:var(--ink-3);line-height:1.6}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="brandrow">
+    <span class="brand">PlutoPredict</span>
+    <span class="brand-sub">Multi-asset prediction platform · Asset × Indication × Prediction Date</span>
+  </div>
+  <h1>Clinical Product Predictor</h1>
+</header>
+
+<nav class="tabnav" id="tabnav" role="tablist" aria-label="Sections">
+  <button class="navtab" role="tab" data-panel="map">Asset Map</button>
+  <button class="navtab" role="tab" data-panel="lookup">Asset Selection</button>
+  <button class="navtab" role="tab" data-panel="architecture">Data Architecture</button>
+  <button class="navtab" role="tab" data-panel="summary">Prediction Summary</button>
+  <button class="navtab pred" role="tab" data-panel="approval"><span class="pn">1)</span> Approval predictor</button>
+  <button class="navtab pred" role="tab" data-panel="commercial"><span class="pn">2)</span> Commercial predictor</button>
+</nav>
+
+<div class="ctx" id="ctx" hidden></div>
+
+<!-- ============ 00 ASSET MAP ============ -->
+<div class="panel" id="p-map" role="tabpanel" aria-label="Asset Map">
+
+  <section>
+    <h2>Asset Map</h2>
+    <div class="tiles" id="mapTiles" style="margin-top:14px"></div>
+  </section>
+
+  <section>
+    <div class="filters" id="mapFilters"></div>
+    <div class="map-wrap" id="mapWrap">
+      <svg id="map" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="World map of asset origin by country"></svg>
+      <div class="mapctl">
+        <button type="button" data-zoom="in" aria-label="Zoom in">+</button>
+        <button type="button" data-zoom="out" aria-label="Zoom out">−</button>
+        <button type="button" data-zoom="reset" aria-label="Reset view" style="font-size:11px">⌂</button>
+      </div>
+      <div class="tip" id="mapTip"></div>
+      <div class="maplegend" id="mapLegend"></div>
+    </div>
+    <div class="map-note">Simplified outlines, equirectangular projection. Drag to pan, scroll to zoom. Marker size and number are companies headquartered there; colour is the most advanced phase among their assets after filtering. Companies and assets are an illustrative sample, not a complete pipeline — entries researched in this workspace are tagged <span class="conf sourced" style="margin-left:0">sourced</span>; the rest are indicative and tagged <span class="conf inferred" style="margin-left:0">inferred</span>.</div>
+  </section>
+
+  <section>
+    <div class="crumb" id="dCrumb"></div>
+    <div class="drill">
+      <div class="dcol"><div class="dhead">Geography <span>origin of asset</span></div><ul class="dlist" id="dGeo"></ul></div>
+      <div class="dcol"><div class="dhead">Company <span>headquartered there</span></div><ul class="dlist" id="dCo"></ul></div>
+      <div class="dcol"><div class="dhead">Asset <span>Phase 1–3</span></div><ul class="dlist" id="dAs"></ul></div>
+    </div>
+    <div id="dDetail"></div>
+  </section>
+
+  <section>
+    <h2 id="siteHead">Where the assets are in trial</h2>
+    <p class="lede" id="siteLede"></p>
+    <div class="tiles" id="siteTiles"></div>
+  </section>
+
+  <section>
+    <div class="map-wrap" id="siteWrap">
+      <svg id="siteMap" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="World map of trial locations for the current selection"></svg>
+      <div class="mapctl">
+        <button type="button" data-zoom="in" aria-label="Zoom in">+</button>
+        <button type="button" data-zoom="out" aria-label="Zoom out">−</button>
+        <button type="button" data-zoom="reset" aria-label="Reset view" style="font-size:11px">⌂</button>
+      </div>
+      <div class="tip" id="siteTip"></div>
+      <div class="maplegend" id="siteLegend"></div>
+    </div>
+    <div class="map-note">Trial geography follows the selection above. Solid markers are registry-sourced studies for assets researched in this workspace; dashed markers are an <b>indicative footprint</b> for assets not yet pulled — derived from the originator's country, phase and licensing as a placeholder until the AACT / ChiCTR pull runs. Studies whose countries the registry has not yet posted sit in the labelled row in the South Atlantic.</div>
+  </section>
+
+  <section>
+    <div class="card">
+      <h3>Selected trial location</h3>
+      <p class="cap">Click a marker on the trial map to list the studies there.</p>
+      <div id="siteDetail" class="map-empty">Nothing selected yet.</div>
+    </div>
+  </section>
+
+</div>
+
+<!-- ============ 01 ASSET SELECTION ============ -->
+<div class="panel" id="p-lookup" role="tabpanel" aria-label="Asset Selection" hidden>
+
+  <section>
+    <h2>Asset Selection</h2>
+    <p class="lede">Type a molecule, code name or partner designation. The engine resolves it to a single asset identity and pulls the development basics — trials by phase, where they ran, who sponsored them and who owns the product — before anything is scored.</p>
+    <div class="combo" id="combo">
+      <input id="q" placeholder="Select a molecule, or start typing a name, code or partner designation" aria-label="Asset"
+             role="combobox" aria-expanded="false" aria-controls="assetMenu" aria-autocomplete="list" autocomplete="off" spellcheck="false">
+      <button type="button" class="combo-toggle" id="comboToggle" aria-label="Show all assets">▾</button>
+      <ul class="combo-menu" id="assetMenu" role="listbox" hidden></ul>
+    </div>
+    <div class="registry" id="registry"></div>
+  </section>
+
+  <div id="lookupOut"></div>
+
+</div>
+
+<!-- ============ 03 PREDICTION SUMMARY ============ -->
+<div class="panel" id="p-summary" role="tabpanel" aria-label="Prediction Summary" hidden>
+
+  <div class="noasset">
+    <h3>No asset loaded</h3>
+    <p>Look up a molecule on the Asset Selection tab, or pick one from the registry, and the engine's verdict appears here.</p>
+    <button class="jump primary" data-goto="lookup" style="margin-top:0">Go to asset selection →</button>
+  </div>
+  <div class="needs-asset">
+
+  <section>
+    <div class="tiles big" id="tilesBig"></div>
+  </section>
+
+  <section>
+    <h2>Prediction engine output</h2>
+    <p class="lede">The remaining outputs the framework specifies, risk-adjusted across every modelled indication. Every figure on this page recomputes from the three assumption levers held on the predictor tabs.</p>
+    <div class="tiles" id="tiles"></div>
+  </section>
+
+  <section>
+    <div class="cols even">
+      <div class="card">
+        <h3>The approval read</h3>
+        <p class="cap">A Phase 2 single-arm signal, scored against the stage base rate and four feature families.</p>
+        <div id="sumApproval"></div>
+        <button class="jump" data-goto="approval">Open approval predictor →</button>
+      </div>
+      <div class="card">
+        <h3>The commercial read</h3>
+        <p class="cap">Patient pool × peak share × price, ramped from launch and weighted by probability of approval.</p>
+        <div id="sumCommercial"></div>
+        <button class="jump" data-goto="commercial">Open commercial predictor →</button>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>What would change the call</h2>
+    <p class="lede">The events that move the prediction most, in the order the engine weights them.</p>
+    <div class="rule"></div>
+    <div class="cols even">
+      <div class="card"><h3>Upgrades</h3><ul class="clean" style="margin-top:12px" id="upgrades"></ul></div>
+      <div class="card"><h3>Downgrades</h3><ul class="clean" style="margin-top:12px" id="downgrades"></ul></div>
+    </div>
+  </section>
+
+  </div>
+</div>
+
+<!-- ============ 02 DATA ARCHITECTURE ============ -->
+<div class="panel" id="p-architecture" role="tabpanel" aria-label="Data Architecture" hidden>
+
+  <section>
+    <h2>Data architecture</h2>
+    <p class="lede" id="archLede">Every source the engine draws on, the attribute categories it yields, and the raw features underneath.</p>
+    <div class="rule"></div>
+    <div class="card" style="padding:6px 8px">
+      <div class="scroll"><table class="arch" id="archTbl"><thead><tr>
+        <th>Data domain</th><th>Source dataset</th><th>Attribute category</th><th>Attributes / raw features</th>
+      </tr></thead><tbody></tbody></table></div>
+    </div>
+  </section>
+
+  <section>
+    <h2 id="resHead">Resolved for this asset</h2>
+    <p class="lede" id="resLede">What each data domain actually returned for the loaded asset — the specific value, the source it came from, and how confident the record is. Where the pull could not resolve an attribute it says so rather than filling the gap.</p>
+    <div class="rule"></div>
+    <div class="noasset">
+      <h3>No asset loaded</h3>
+      <p>Load a molecule on the Asset Selection tab and each domain below fills with what the sources returned for it.</p>
+      <button class="jump primary" data-goto="lookup" style="margin-top:0">Go to asset selection →</button>
+    </div>
+    <div class="needs-asset">
+      <div class="res-legend"><span class="conf sourced" style="margin-left:0">sourced</span> backed by a primary document or registry record &nbsp; <span class="conf inferred" style="margin-left:0">inferred</span> implied by a source but not stated numerically &nbsp; <span class="conf unresolved" style="margin-left:0">unresolved</span> the pull returned nothing usable</div>
+      <div class="res" id="resolved"></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>What PlutoPredict is</h2>
+    <p class="lede">A prediction engine for Phase 2 oncology assets — scored at the moment the first efficacy readout exists and the pivotal commitment has not yet been made.</p>
+    <div class="rule"></div>
+    <div class="cols">
+      <div class="card">
+        <h3>The decision it is built for</h3>
+        <p class="cap" style="margin-bottom:0">Phase 2 is where the evidence is thinnest and the money is largest. A single-arm ORR in thirty patients is the only efficacy signal, the pivotal design is not fixed, and the licensing market prices the asset anyway. The engine takes that same public evidence, scores it, and produces a falsifiable number — a probability of approval, a launch date, and a revenue curve — that can be checked afterwards against what happened and against what the market paid.</p>
+      </div>
+      <div class="card">
+        <h3>The unit of analysis</h3>
+        <p class="cap" style="margin-bottom:0">The asset–indication–date triple, never the asset alone. An asset is not one prediction but several: each indication carries its own stage, its own base rate, its own competitive field and its own patient pool. Fixing the prediction date matters as much — the engine may only see evidence published on or before it, which is what makes a backtest possible.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>How it runs</h2>
+    <p class="lede">Four stages from raw public data to a scored prediction.</p>
+    <div class="rule"></div>
+    <div class="pipe">
+      <div class="step"><div class="num">STAGE 01</div><h4>Ingest</h4><p>Seventeen public and licensed sources, normalised to the asset–indication grain and cut off at the prediction date.</p></div>
+      <div class="step"><div class="num">STAGE 02</div><h4>Resolve</h4><p>Trials, publications, filings and claims are linked to a single asset identity, and indications mapped to a common taxonomy. The Asset Selection tab is this stage made visible.</p></div>
+      <div class="step"><div class="num">STAGE 03</div><h4>Score features</h4><p>Raw attributes collapse into five feature families on a 0–100 scale. These are the inputs both predictors share.</p></div>
+      <div class="step"><div class="num">STAGE 04</div><h4>Predict</h4><p>The approval predictor outputs probability and timing. The commercial predictor turns those into a risk-adjusted revenue curve.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>The five feature families</h2>
+    <p class="lede">Everything ingested resolves into these. The approval predictor uses the first four; the commercial predictor uses Market Addressability and Competitive Intensity.</p>
+    <div class="rule"></div>
+    <div class="scroll"><table>
+      <thead><tr><th>Feature family</th><th>Built from</th><th>Feeds</th><th>Weight in PoA</th></tr></thead>
+      <tbody id="featTbl"></tbody>
+    </table></div>
+  </section>
+
+</div>
+
+<!-- ============ 04 APPROVAL PREDICTOR ============ -->
+<div class="panel" id="p-approval" role="tabpanel" aria-label="Approval predictor" hidden>
+
+  <div class="noasset">
+    <h3>No asset loaded</h3>
+    <p>The approval predictor scores whichever asset is loaded from the Asset Selection tab.</p>
+    <button class="jump primary" data-goto="lookup" style="margin-top:0">Go to asset selection →</button>
+  </div>
+  <div class="needs-asset">
+
+  <section>
+    <h2>Approval predictor</h2>
+    <p class="lede">Probability of approval and expected launch date, per indication. A stage base rate, adjusted by four feature families and capped — never a free-running score.</p>
+    <div class="rule"></div>
+    <div class="tiles" id="apprTiles"></div>
+  </section>
+
+  <section>
+    <h2>The model</h2>
+    <p class="lede">Four features move the base rate, with the signs and weights fixed in advance rather than fitted to this asset.</p>
+    <div class="formula" id="formula"></div>
+  </section>
+
+  <section>
+    <h2>Move the assumptions</h2>
+    <p class="lede">Two of the three levers act on approval. Both predictors read the same state, so a change here follows through to the commercial tab.</p>
+    <div class="controls" id="ctlApproval"></div>
+  </section>
+
+  <section>
+    <div class="cols">
+      <div class="card">
+        <h3>Signal profile</h3>
+        <p class="cap">The five feature families, scored 0–100 from the asset record. Competitive Intensity is shown raw — higher is worse.</p>
+        <div class="tabs" id="tabs" role="tablist"></div>
+        <div class="bars" id="bars"></div>
+      </div>
+      <div class="card">
+        <h3>Probability of approval by indication</h3>
+        <p class="cap">Base rate for the stage, then the feature multiplier, then the 85% cap.</p>
+        <div id="poaChart"></div>
+        <div class="legend">
+          <span class="key"><span class="sw" style="background:var(--line-2)"></span>Stage base rate</span>
+          <span class="key"><span class="sw" style="background:var(--accent)"></span>After feature adjustment</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Approval detail</h2>
+    <p class="lede">The unit of analysis is the asset–indication pair, not the asset. Each carries its own stage, base rate and pivotal path.</p>
+    <div class="rule"></div>
+    <div class="card" style="padding:6px 8px">
+      <div class="scroll"><table id="apprTbl">
+        <thead><tr>
+          <th>Indication</th><th>Base rate</th><th>Feature multiplier</th><th>PoA</th>
+          <th>Pivotal path (yrs)</th><th>Expected launch</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table></div>
+    </div>
+  </section>
+
+  </div>
+</div>
+
+<!-- ============ 05 COMMERCIAL PREDICTOR ============ -->
+<div class="panel" id="p-commercial" role="tabpanel" aria-label="Commercial predictor" hidden>
+
+  <div class="noasset">
+    <h3>No asset loaded</h3>
+    <p>The commercial predictor scores whichever asset is loaded from the Asset Selection tab.</p>
+    <button class="jump primary" data-goto="lookup" style="margin-top:0">Go to asset selection →</button>
+  </div>
+  <div class="needs-asset">
+
+  <section>
+    <h2>Risk-adjusted NPV</h2>
+    <p class="lede">The predicted current value of the asset itself, independent of any deal that has or has not been signed. Every indication's revenue curve is weighted by its probability of approval, ramped to peak share from its own predicted launch, discounted back to the prediction date, and netted for the development still to be paid for.</p>
+    <div class="rule"></div>
+    <div class="tiles" id="npvTiles"></div>
+    <div class="cols" style="margin-top:22px">
+      <div class="card">
+        <h3>From unrisked revenue to asset NPV</h3>
+        <p class="cap">Where the value goes: approval risk first, then operating margin, then the development still to be funded.</p>
+        <div id="npvWater"></div>
+      </div>
+      <div class="card" style="padding-bottom:8px">
+        <h3>NPV by indication</h3>
+        <p class="cap">Each indication's probability of approval, launch and time to peak share set its share of the total.</p>
+        <div class="scroll"><table id="npvTbl" style="min-width:520px">
+          <thead><tr><th>Indication</th><th>PoA</th><th>Launch</th><th>Peak share</th><th>rNPV $mm</th><th>Share</th></tr></thead>
+          <tbody></tbody>
+        </table></div>
+      </div>
+    </div>
+    <p class="lede" id="npvNote" style="margin:16px 0 0;max-width:none"></p>
+  </section>
+
+  <section>
+    <h2>Commercial predictor</h2>
+    <p class="lede" id="commLede">Patient pool × peak share × annual price, uplifted for ex-US territory, ramped over five years from the predicted launch and weighted by probability of approval.</p>
+    <div class="rule"></div>
+    <div class="tiles" id="commTiles"></div>
+  </section>
+
+  <section>
+    <h2>Move the assumptions</h2>
+    <p class="lede">Peak share is the single largest swing factor in the whole model. Competitive intensity acts on both predictors at once.</p>
+    <div class="controls" id="ctlCommercial"></div>
+  </section>
+
+  <section>
+    <div class="card">
+      <h3 id="chartHead">Revenue build</h3>
+      <p class="cap">Unrisked outcome against the probability-weighted line the engine actually predicts.</p>
+      <div id="chart"></div>
+      <div class="legend">
+        <span class="key"><span class="sw" style="background:var(--line-2)"></span>Unrisked, all indications</span>
+        <span class="key"><span class="sw" style="background:var(--accent)"></span>Risk-adjusted</span>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Revenue detail</h2>
+    <p class="lede">Each asset–indication pair carries its own patient pool, price and assumed share.</p>
+    <div class="rule"></div>
+    <div class="card" style="padding:6px 8px">
+      <div class="scroll"><table id="tbl">
+        <thead><tr>
+          <th>Indication</th><th>1L patients (US)</th><th>Peak share</th>
+          <th>Peak $mm</th><th>PoA</th><th>Launch</th><th>Risk-adj peak $mm</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Benchmark against what the market paid</h2>
+    <p class="lede">The deal gives the model an external scoreboard — the part of this framework that makes it falsifiable rather than decorative.</p>
+    <div class="rule"></div>
+    <div class="verdict">
+      <h3 id="vhead">Model versus deal</h3>
+      <div class="vgrid" id="vgrid"></div>
+      <p id="vbody"></p>
+      <p id="vreadings"></p>
+    </div>
+  </section>
+
+  </div>
+</div>
+
+<footer id="foot"></footer>
+
+</div>
+
+<script>
+/* =====================================================================
+   ASSET REGISTRY
+   One record per molecule. Adding a product = appending a record here.
+   Everything else on the page — header, lookup, both predictors — reads
+   from whichever record is current.
+   ===================================================================== */
+const ASSETS = {
+  rc148: {
+    id:"rc148",
+    name:"RC148", alt:"ABBV-1480",
+    aliases:["RC148","RC-148","ABBV-1480","ABBV1480"],
+    modality:"Bispecific antibody", target:"PD-1 × VEGF",
+    moa:"Dual blockade of PD-1 checkpoint signalling and VEGF-driven angiogenesis in a single molecule",
+    originator:"RemeGen Co., Ltd.", originatorLoc:"Yantai, Shandong, China",
+    highestPhase:"Phase 3", leadSetting:"1L squamous NSCLC",
+    rp3d:"10 mg/kg", rp3dConf:"sourced",
+    sub:"PD-1 × VEGF bispecific antibody. Originated by RemeGen; ex-Greater China rights held by AbbVie. Scored on evidence available as of the prediction date only.",
+    predDate:"19 Sep 2026", predYear:2026.72,
+    territory:"ex-Greater China", scoredAt:"Phase 2 readout",
+
+    rights:[
+      {territory:"Greater China", detail:"Mainland, Hong Kong, Macau, Taiwan", holder:"RemeGen", basis:"Originator — retained", terms:"Leads all China development and, on approval, commercialisation", conf:"sourced"},
+      {territory:"Rest of world", detail:"US, EU, Japan and all other markets", holder:"AbbVie", basis:"Exclusive licence · effective 10 Mar 2026", terms:"$650m upfront (paid; expensed as acquired IPR&D in AbbVie's Q1 2026) · up to $4.95bn development, regulatory and commercial milestones · tiered double-digit royalties on ex-China net sales", conf:"sourced"}
+    ],
+
+    trials:[
+      {id:"RC148-C001 · NCT06016062", phase:"1/2", ind:"Advanced solid tumours — NSCLC, cervical, gastric, ovarian cohorts", design:"Monotherapy dose escalation, then seven combination cohorts (docetaxel, RC48, RC88, bevacizumab)", status:"Recruiting", kind:"live",
+       sponsor:"RemeGen", role:"Lead sponsor", countries:["China"], start:"14 Sep 2023", end:"31 Dec 2025 (est.)", n:"221 (est.)",
+       note:"Basis for the CDE Breakthrough Therapy designation (RC148 + docetaxel, 2L NSCLC); 31 sites", conf:"sourced"},
+      {id:"RC148-C002 · NCT06883630", phase:"1b", ind:"1L NSCLC, squamous and non-squamous; EGFR-mutant post-TKI cohort", design:"Multi-cohort, open-label; RC148 alone or with carboplatin + paclitaxel / pemetrexed", status:"Active, not recruiting — read out", kind:"live",
+       sponsor:"RemeGen", role:"Lead sponsor", countries:["China"], start:"13 Mar 2025", end:"31 Aug 2026 (est.)", n:"121",
+       note:"WCLC 2026 oral OA14.01.03: ORR 90.0% squamous (27/30), 75.9% non-squamous (22/29) at 10 mg/kg; 24 sites", conf:"sourced"},
+      {id:"RC148-C301 · NCT07416474", phase:"3", ind:"1L advanced squamous NSCLC", design:"Randomised, double-blind; RC148 + carboplatin/paclitaxel vs tislelizumab + carboplatin/paclitaxel; primary PFS", status:"Recruiting", kind:"live",
+       sponsor:"RemeGen", role:"Lead sponsor", countries:["China"], start:"3 Apr 2026", end:"31 Dec 2027 (est. primary)", n:"574 (est.)",
+       note:"China pivotal for the lead indication; 90+ sites; study completion Nov 2029", conf:"sourced"},
+      {id:"RC148-C303 · NCT07462143", phase:"2/3", ind:"1L unresectable or metastatic colorectal cancer, MSS / pMMR", design:"Randomised; RC148 (two dose levels) + CAPEOX; Phase 3 vs bevacizumab + chemotherapy; primary ORR", status:"Recruiting", kind:"live",
+       sponsor:"RemeGen", role:"Lead sponsor", countries:["China"], start:"12 May 2026", end:"12 May 2027 (est.)", n:"80 (est., Phase 2)",
+       note:"First patient dosed 15 Jun 2026; MSI-H / dMMR excluded; 19 sites", conf:"sourced"},
+      {id:"RC118-C002 · NCT06038396", phase:"1/2", ind:"CLDN18.2-positive gastric / GEJ adenocarcinoma, ≤2 prior lines", design:"RC118 (CLDN18.2 ADC) + toripalimab vs RC118 + RC148 20 mg/kg Q3W, randomised 1:1 in expansion", status:"Recruiting", kind:"live",
+       sponsor:"RemeGen", role:"Lead sponsor", countries:["China"], start:"3 Aug 2023", end:"28 Feb 2026 (est.)", n:"48 (est.)",
+       note:"ESMO 2025 LBA83: PFS trend favouring the RC148 arm; 17 sites", conf:"sourced"},
+      {id:"ABBV-1480 global Phase 3 · NCT07756645", phase:"3", ind:"1L locally advanced / metastatic squamous NSCLC (IIIB–IV)", design:"Randomised, multiregional, open-label; ABBV-1480 + carboplatin + paclitaxel/nab-paclitaxel vs pembrolizumab + same; dual primary PFS (BICR) and OS", status:"Not yet recruiting", kind:"plan",
+       sponsor:"AbbVie", role:"Lead sponsor, ex-Greater China", countries:["Multiregional"], start:"22 Sep 2026 (est.)", end:"Dec 2029 (est. primary)", n:"940 (est.)",
+       note:"~250 sites planned; follows the Aug 2025 FDA Phase 2 IND clearance", conf:"sourced"}
+    ],
+
+    model:{
+      BASE:[
+        {name:"1L squamous NSCLC", stage:"Phase 3 ongoing", base:0.35,
+         f:{cq:78,dm:85,ci:88,ss:90,ma:72}, pat:22130, share:0.18, price:132000, uplift:0.62, bt:3.2, fl:0.9,
+         why:{cq:"90% ORR at RP3D, but n=30 and single-arm", dm:"RP3D declared, Phase 3 running, WCLC oral",
+              ci:"Three PD-(L)1×VEGF rivals already in pivotal trials", ss:"AbbVie commercial scale ex-China",
+              ma:"~22k US patients, high price, must displace pembro+chemo"}},
+        {name:"1L non-squamous NSCLC", stage:"Phase 2 · RP3D set", base:0.20,
+         f:{cq:72,dm:80,ci:92,ss:90,ma:88}, pat:61897, share:0.10, price:138000, uplift:0.62, bt:4.5, fl:0.9,
+         why:{cq:"75.9% ORR, n=29, no randomised readout", dm:"Same RP3D, Phase 3 planned not started",
+              ci:"The most contested setting in oncology", ss:"Same partner", ma:"Largest pool, ~62k US patients"}},
+        {name:"1L MSS mCRC", stage:"Phase 2/3 enrolling", base:0.18,
+         f:{cq:55,dm:70,ci:85,ss:88,ma:80}, pat:42575, share:0.09, price:118000, uplift:0.62, bt:5.0, fl:1.0,
+         why:{cq:"No efficacy data disclosed in this indication yet", dm:"RC148-C303 dosing since June 2026",
+              ci:"Rivals filling the setting fast", ss:"China-led study, ex-China rights with AbbVie",
+              ma:"~43k US patients, shorter therapy duration"}},
+        {name:"1L G/GEJ (+ RC118)", stage:"Phase 2", base:0.12,
+         f:{cq:62,dm:60,ci:70,ss:85,ma:62}, pat:15210, share:0.12, price:125000, uplift:0.62, bt:6.0, fl:1.0,
+         why:{cq:"PFS trend vs toripalimab arm, CLDN18.2-selected", dm:"Phase 1/2, no pivotal declared",
+              ci:"Least contested of the four", ss:"Combination asset also RemeGen-originated",
+              ma:"Biomarker-selected, smallest pool"}}
+      ],
+      DEAL:{up:650, ms:4950, counterparty:"AbbVie"},
+      DEVCOST:900, REF:3000
+    },
+
+    resolvedAsOf:"19 Sep 2026",
+    resolved:[
+      {domain:"Clinical Trials", sources:"ClinicalTrials.gov (AACT) · ChiCTR", feeds:"Development Momentum · timing · base rate", rows:[
+        ["Registered studies","6 — five RemeGen-sponsored in China (RC148-C001, C002, C301, C303; RC118-C002) and one AbbVie multiregional Phase 3",{u:"https://clinicaltrials.gov/study/NCT07756645",l:"ClinicalTrials.gov"},"sourced"],
+        ["Highest phase","Phase 3 in 1L squamous NSCLC — China pivotal RC148-C301 recruiting since 3 Apr 2026; global ABBV-1480 Phase 3 posted with an estimated start of 22 Sep 2026",{u:"https://clinicaltrials.gov/study/NCT07416474",l:"NCT07416474"},"sourced"],
+        ["Pivotal design — China","Double-blind, randomised; RC148 + carboplatin/paclitaxel vs tislelizumab + carboplatin/paclitaxel; n=574; primary PFS per RECIST 1.1 at 24 months; PD-L1 tested at entry; ECOG 0–1, age 18–75",{u:"https://clinicaltrials.gov/study/NCT07416474",l:"NCT07416474"},"sourced"],
+        ["Pivotal design — global","Open-label, multiregional; ABBV-1480 + carboplatin + paclitaxel/nab-paclitaxel vs pembrolizumab + same backbone; n=940; dual primary PFS by BICR and OS; ~250 sites",{u:"https://clinicaltrials.gov/study/NCT07756645",l:"NCT07756645"},"sourced"],
+        ["Primary completion dates","C301: 31 Dec 2027 (study completion Nov 2029) · global Phase 3: Dec 2029 · C303: 12 May 2027 · C002: 31 Aug 2026 · RC118-C002: 28 Feb 2026 · C001: 31 Dec 2025",{u:"https://clinicaltrials.gov/study/NCT07462143",l:"NCT07462143"},"sourced"],
+        ["Development footprint","China: 31 (C001) + 24 (C002) + 90+ (C301) + 19 (C303) + 17 (RC118-C002) sites. Ex-China: ~250 sites planned under AbbVie, none active at the prediction date",{u:"https://clinicaltrials.gov/study/NCT06016062",l:"NCT06016062"},"sourced"],
+        ["Enrolment on record","221 + 121 + 574 + 80 + 48 + 940 = 1,984 planned across the six studies; 121 enrolled in C002, the cohort that read out",{u:"https://clinicaltrials.gov/study/NCT06883630",l:"NCT06883630"},"sourced"],
+        ["Sponsor pattern","RemeGen is lead sponsor on every China study with no collaborators listed; AbbVie is sole sponsor ex-China from March 2026",{u:"https://clinicaltrials.gov/study/NCT07756645",l:"NCT07756645"},"sourced"],
+        ["ChiCTR registrations","None surfaced for RC148 in this pass — the China studies appear to be registered on ClinicalTrials.gov only",null,"unresolved"]
+      ]},
+      {domain:"Clinical Evidence", sources:"WCLC 2026 · ESMO 2025 · AACR 2024 · OncLive", feeds:"Clinical Quality", rows:[
+        ["Efficacy — 1L NSCLC","ORR 90.0% squamous (27/30) and 75.9% non-squamous (22/29) at 10 mg/kg plus platinum doublet in RC148-C002; oral presentation OA14.01.03, WCLC Seoul, 15 Sep 2026",{u:"https://news.abbvie.com/2026-08-21-AbbVie-to-Present-New-Data-at-WCLC-2026-Showcasing-Innovation-Across-Lung-Cancer-Pipeline",l:"AbbVie, WCLC 2026"},"sourced"],
+        ["Response depth, PFS, DoR","Not disclosed in the public abstract or press release; disease-control rate and follow-up duration not reported",null,"unresolved"],
+        ["Safety — 1L NSCLC","Most common TRAEs haematologic (white-cell, neutrophil and platelet decreases, anaemia); no grade ≥3 haemorrhage at 10 mg/kg; grade ≥3 and discontinuation rates not quantified publicly",{u:"https://news.abbvie.com/2026-08-21-AbbVie-to-Present-New-Data-at-WCLC-2026-Showcasing-Innovation-Across-Lung-Cancer-Pipeline",l:"AbbVie, WCLC 2026"},"sourced"],
+        ["Recommended Phase 3 dose","10 mg/kg in combination for both NSCLC histologies; 20 mg/kg Q3W used in the RC118 gastric combination",{u:"https://news.abbvie.com/2026-08-21-AbbVie-to-Present-New-Data-at-WCLC-2026-Showcasing-Innovation-Across-Lung-Cancer-Pipeline",l:"AbbVie, WCLC 2026"},"sourced"],
+        ["Efficacy — G/GEJ (ESMO 2025 LBA83)","RC118 2.0 mg/kg + RC148 20 mg/kg vs RC118 + toripalimab 240 mg, Q3W, CLDN18.2 2+/3+ ≥40%, ≤2 prior lines; PFS trend favouring the RC148 arm; numeric ORR and median PFS sit behind the journal paywall",{u:"https://www.annalsofoncology.org/article/S0923-7534(25)04868-9/fulltext",l:"Ann Oncol LBA83"},"inferred"],
+        ["Efficacy — 2L NSCLC","RC148 + docetaxel after PD-(L)1 and platinum failure (RC148-C001) supported the CDE Breakthrough designation; the data are not yet public",{u:"https://www.marketscreener.com/news/remegen-co-ltd-s-proprietary-novel-bispecific-antibody-rc148-has-been-officially-included-in-th-ce7c51ddd88bf424",l:"CDE designation"},"inferred"],
+        ["Molecule","Humanised, Fc-silenced IgG1: an anti-PD-1 antibody fused to an anti-VEGF VHH (nanobody), designed to enrich in VEGF-high tumour regions",{u:"https://aacrjournals.org/cancerres/article/84/6_Supplement/2734/738775/Abstract-2734-RC148-a-novel-bispecific-antibody",l:"AACR 2024 #2734"},"sourced"],
+        ["Scientific momentum","AACR 2024 preclinical → ESMO 2025 late-breaker (gastric) → WCLC 2026 oral (NSCLC); presenting investigator Yuanyuan Zhao, MD",{u:"https://www.onclive.com/view/rc148-plus-chemotherapy-in-frontline-nsclc-a-q-a-with-yuanyuan-zhao-md",l:"OncLive"},"sourced"],
+        ["Publications / citations","No peer-reviewed full paper on RC148 clinical data yet; citation velocity not measurable",null,"unresolved"]
+      ]},
+      {domain:"Regulatory", sources:"Drugs@FDA · NMPA / CDE · Orange Book", feeds:"Development Momentum · timing · approval characteristics", rows:[
+        ["FDA","IND cleared 8 Aug 2025 for Phase 2 in multiple advanced solid tumours; no breakthrough, fast-track or orphan designation disclosed; global Phase 3 proceeding under AbbVie",{u:"https://www.prnewswire.com/news-releases/remegens-independently-developed-bispecific-antibody-rc148-approved-to-proceed-phase-ii-clinical-trial-in-us-by-fda-302525178.html",l:"RemeGen, Aug 2025"},"sourced"],
+        ["NMPA / CDE","Breakthrough Therapy designation, Aug 2025: RC148 + docetaxel for driver-gene-negative locally advanced or metastatic NSCLC after PD-(L)1 and platinum failure (basis RC148-C001). No NDA filed",{u:"https://www.marketscreener.com/news/remegen-co-ltd-s-proprietary-novel-bispecific-antibody-rc148-has-been-officially-included-in-th-ce7c51ddd88bf424",l:"CDE, Aug 2025"},"sourced"],
+        ["Regulatory outcome","Investigational in every territory; no approval, rejection or withdrawal on record",{u:"https://www.accessdata.fda.gov/scripts/cder/daf/",l:"Drugs@FDA"},"sourced"],
+        ["Timing analogue — in class","Ivonescimab, 1L squamous NSCLC in China: HARMONi-6 OS presented 31 May 2026 → NMPA approval 12 Aug 2026, about two and a half months; first in-class 1L NSCLC approval April 2025",{u:"https://www.biopharminternational.com/view/nmpa-approves-ivonescimab-plus-chemotherapy-for-first-line-squamous-nsclc-based-on-harmoni-6-data",l:"NMPA, Aug 2026"},"sourced"],
+        ["Orange Book / exclusivity","Not applicable — unapproved biologic; 12-year BLA exclusivity would run from any future US approval",null,"unresolved"]
+      ]},
+      {domain:"Epidemiology", sources:"ACS Cancer Statistics 2026 · SEER · GBD", feeds:"Market Addressability", rows:[
+        ["US lung cancer, 2026","229,410 new cases (110,910 men, 118,500 women); 124,990 deaths",{u:"https://www.cancer.org/cancer/types/lung-cancer/about/key-statistics.html",l:"ACS 2026"},"sourced"],
+        ["Histology split","Squamous ≈23–30% of NSCLC (a SEER-based series gives 22.9%; other cohorts ~30%); adenocarcinoma 50–65%",{u:"https://www.ncbi.nlm.nih.gov/books/NBK564510/",l:"SEER / StatPearls"},"sourced"],
+        ["Stage at diagnosis","57% distant, 22% regional, 15% localised (SEER, all lung cancer)",{u:"https://pmc.ncbi.nlm.nih.gov/articles/PMC4239667/",l:"SEER analysis"},"sourced"],
+        ["US colorectal cancer, 2026","158,850 new cases (108,860 colon, 49,990 rectal); 55,230 deaths",{u:"https://acsjournals.onlinelibrary.wiley.com/doi/10.3322/caac.70067",l:"ACS CRC 2026"},"sourced"],
+        ["MSS / pMMR share of mCRC","≈85% of metastatic colorectal cancer is microsatellite-stable — the RC148-C303 population",null,"inferred"],
+        ["US gastric cancer","ACS 2026 figure not retrieved in this pass; the ACS 2025 estimate was ≈30,300 new cases. CLDN18.2-positive share ≈35–40% of G/GEJ in the literature",null,"inferred"],
+        ["Global burden","GBD country-level incidence not pulled — the 62% ex-US uplift in the revenue model is a modelled assumption",null,"unresolved"]
+      ]},
+      {domain:"Real-World Market", sources:"CMS claims · US EHR (ConcertAI)", feeds:"Market Addressability", rows:[
+        ["Treated population, advanced NSCLC","99.8% of 8,811 advanced NSCLC patients (stage IIIB–IV, US EHR, 2015–2021) received guideline-recommended systemic therapy; roughly one third died after first line",{u:"https://pmc.ncbi.nlm.nih.gov/articles/PMC13233156/",l:"ConcertAI RWE"},"sourced"],
+        ["First-line treatment mix, stage IV","Carboplatin + pembrolizumab + pemetrexed 22.6%; pembrolizumab alone 13.6%; carboplatin + paclitaxel 11.8%; carboplatin + pemetrexed 9.6%; carboplatin + paclitaxel + pembrolizumab 6.8% — pembrolizumab-based regimens are the displacement target",{u:"https://pmc.ncbi.nlm.nih.gov/articles/PMC13233156/",l:"ConcertAI RWE"},"sourced"],
+        ["Patient journey","Time from diagnosis to treatment, switching and discontinuation rates not resolved from claims in this sample",null,"unresolved"],
+        ["CMS claims layer","Not licensed for this sample — advanced-stage and first-line treatment rates remain assumption-driven inputs to the patient denominator",null,"unresolved"]
+      ]},
+      {domain:"Commercial Performance", sources:"CMS Part B ASP · SEC EDGAR · HKEX", feeds:"Price per course · Sponsor Strength", rows:[
+        ["Price analogue — checkpoint inhibitor","Keytruda list $12,272 per 200 mg every 3 weeks (Mar 2026), about $213k per full year; Medicare ASP $58.56/mg (Q3 2025), about $11,712 per dose; realised annual cost $150–180k",{u:"https://www.drugs.com/price-guide/keytruda",l:"Drugs.com · CMS ASP"},"sourced"],
+        ["Deal accounting — AbbVie","$650m upfront expensed as acquired IPR&D in Q1 2026; up to $5.0bn in milestones; tiered double-digit royalties; licence effective 10 Mar 2026",{u:"https://www.sec.gov/Archives/edgar/data/0001551152/000155115226000017/abbv-20260331.htm",l:"AbbVie 10-Q"},"sourced"],
+        ["Sponsor revenue — RemeGen","2025 revenue RMB 3,241.6m (+90% from RMB 1,710.2m); net profit RMB 709.7m against a RMB 1.47bn loss in 2024; gross profit RMB 2.82bn; cash and equivalents RMB 1,493m at 31 Dec 2025",{u:"https://www.tipranks.com/news/company-announcements/remegen-swings-to-profit-on-strong-2025-revenue-growth",l:"RemeGen FY2025"},"sourced"],
+        ["Launch-performance analogues","No US PD-(L)1×VEGF launch exists to benchmark; the in-class China launch (ivonescimab) is not visible in CMS Part B data",null,"unresolved"],
+        ["IQVIA · Komodo · Evaluate","Optional sources not licensed for this sample; consensus peak-sales forecasts not incorporated",null,"unresolved"]
+      ]},
+      {domain:"Sponsor", sources:"Company filings · press releases", feeds:"Sponsor Strength", rows:[
+        ["Originator","RemeGen Co., Ltd., Yantai (HKEX 9995 · SSE 688331); two commercial products — telitacicept (autoimmune) and disitamab vedotin (HER2 ADC)",{u:"https://www.remegen.com/",l:"RemeGen"},"sourced"],
+        ["Licensee","AbbVie — exclusive ex-Greater China; stated intent to combine RC148 with its ADCs (e.g. telisotuzumab adizutecan, Temab-A) across solid tumours",{u:"https://news.abbvie.com/2026-01-12-AbbVie-and-RemeGen-Announce-Exclusive-Licensing-Agreement-to-Develop-A-Novel-Bispecific-Antibody-for-Advanced-Solid-Tumors",l:"AbbVie, Jan 2026"},"sourced"],
+        ["Sponsor commitment","RemeGen: five active RC148 studies plus the RC118 combination; per-asset R&D spend not disclosed. AbbVie: a 940-patient global Phase 3 committed within six months of the licence taking effect",null,"inferred"]
+      ]},
+      {domain:"Competitive (derived)", sources:"Counted from the trial and regulatory domains", feeds:"Competitive Intensity", rows:[
+        ["Ivonescimab — Akeso / Summit","China: approved May 2024 (EGFRm 2L), Apr 2025 (1L PD-L1+ monotherapy) and 12 Aug 2026 (1L squamous + chemo — HARMONi-6 OS HR 0.66, median 27.9 vs 23.7 months, n=532). US: EGFRm BLA with PDUFA 14 Nov 2026; HARMONi-3 squamous interim PFS missed its significance threshold in May 2026, final squamous PFS due H2 2026, non-squamous H1 2027",{u:"https://ascopost.com/news/june-2026/overall-survival-benefit-with-ivonescimab-plus-chemotherapy-in-advanced-squamous-nsclc/",l:"ASCO 2026 · Summit"},"sourced"],
+        ["Pumitamig — BioNTech / BMS","PD-L1×VEGF-A; ROSETTA Lung-02 Phase 2/3 in 1L NSCLC with the Phase 3 part enrolling against pembrolizumab + chemo; Phase 2 confirmed ORR 68.4% squamous and 57.1% non-squamous (ASCO 2026); ROSETTA Lung-01 Phase 3 in ES-SCLC",{u:"https://www.biontech.com/int/en/home/mediaroom/news/press-releases/2026/05/Global-Data-for-BioNTech-and-Bristol-Myers-Squibb-s-PD-L1xVEGF-A-Bispecific-Pumitamig-Shows-Encouraging-Efficacy-in-Patients-with-Non-Small-Cell-Lung-Cancer-in-ROSETTA-Lung-02-Trial.html",l:"BioNTech, May 2026"},"sourced"],
+        ["PF-08634404 — Pfizer / 3SBio","Symbiotic-Lung-01 Phase 3 in 1L NSCLC, both histologies, n=1,500 vs pembrolizumab + chemo with dual PFS/OS endpoints; Phase 2 monotherapy ORR 75% squamous and 63.6% non-squamous (PD-L1 ≤1%); Phase 1b/2 ADC combinations recruiting across 10 countries",{u:"https://www.fiercebiotech.com/biotech/summit-leading-charge-pfizer-lays-out-its-own-plan-replace-keytruda-bispecific",l:"Pfizer · Fierce"},"sourced"],
+        ["Derived count","3 rival PD-(L)1×VEGF assets at or beyond Phase 3 in 1L NSCLC; 1 already approved in China for RC148's exact lead indication; RC148's China comparator (tislelizumab) is the arm ivonescimab has already beaten on OS",null,"sourced"]
+      ]},
+      {domain:"Other Supporting", sources:"WIPO / USPTO · Open Payments", feeds:"Exclusivity horizon · KOL engagement", rows:[
+        ["Composition-of-matter IP","WO2024141027A1 “Bispecific antibody and application thereof”, RemeGen Shanghai / RemeGen; priority 30 Dec 2022, PCT filed 29 Dec 2023, published 4 Jul 2024; claim 1 covers an anti-PD-1 binding domain plus a humanised anti-VEGF VHH with defined CDRs",{u:"https://patents.google.com/patent/WO2024141027A1/en",l:"WO2024141027A1"},"sourced"],
+        ["Patent family","National phases EP4534562A1, CN118591562A, US20250145701A1, JP2025525408A, CA3243312A1, KR20250054821A, AU2023387779A1 — pending, none yet granted",{u:"https://patents.google.com/patent/WO2024141027A1/en",l:"WO2024141027A1"},"sourced"],
+        ["Remaining protection","Base term to about Dec 2043 from the PCT filing, before any patent-term extension. In-class prior art includes Akeso's US 11,661,454 (priority Aug 2019, expiry Feb 2040), which is not RC148's",{u:"https://patents.google.com/patent/US11661454B2/en",l:"US11661454"},"inferred"],
+        ["Open Payments / KOL engagement","Not applicable pre-launch; no US physician payments attributable to RC148",null,"unresolved"]
+      ]}
+    ],
+    readings:"Three readings are available, and the framework cannot choose between them on public data alone. Either peak share is understated — AbbVie may be underwriting a best-in-class label rather than a fourth-entrant share. Or the four modelled indications are the wrong denominator, and the real thesis is RC148 as the immune backbone under AbbVie's ADC portfolio, an option this revenue model does not price. Or the deal is rich, which is what a low upfront-to-risk-adjusted-peak ratio usually signals in a class with three pivotal competitors already ahead.",
+    upgrades:[
+      ["A randomised PFS or OS win in 1L squamous.","Clinical Quality moves from a 30-patient single arm to hard evidence; PoA re-bases on Phase 3 interim rather than the stage prior."],
+      ["Breakthrough or priority designation.","Pulls roughly nine months out of the timeline and lifts the speed component of the score."],
+      ["A rival failure.","Competitive intensity is the second-largest lever and it moves on other companies' readouts, not this asset's."],
+      ["Positive ADC-combination data.","Would open indications outside the four modelled here — the value the deal price implies but the model cannot see."]
+    ],
+    downgrades:[
+      ["A class-wide safety signal.","The independence assumption behind the at-least-one-approval figure collapses; all four fall together."],
+      ["Ivonescimab or pumitamig launching first with a strong label.","Peak share compresses toward single digits before RC148 files."],
+      ["ORR failing to convert to survival.","The precedent already exists in this class — the HARMONi overall survival benefit did not reach significance."],
+      ["Slippage in Phase 3 enrolment.","Every year of delay into a more crowded market costs more than the discount rate alone suggests."]
+    ]
+  }
+};
+
+/* =====================================================================
+   FRAMEWORK CONSTANTS — shared by every asset
+   ===================================================================== */
+const BETA={cq:0.45,dm:0.25,ci:-0.20,ss:0.30}, CAP=0.85, TEFF=0.12;
+const RAMP=[0.15,0.45,0.75,0.92,1.00];
+const W={scale:0.50,speed:0.25,crowd:0.25}, CROWDP=0.60;
+const DISC=0.11, MARGIN=0.40, TERM=4.0;
+const FEATS=[["cq","Clinical Quality"],["dm","Development Momentum"],["ci","Competitive Intensity"],["ss","Sponsor Strength"],["ma","Market Addressability"]];
+const FEATDOC={
+  cq:["Efficacy and safety attributes from the clinical-evidence domain — ORR, PFS, OS, hazard ratio, grade 3/4 events, discontinuations.","Approval"],
+  dm:["Development-progress and footprint attributes — stage, RP3D status, site and country count, enrolment pace, publication momentum.","Approval + timing"],
+  ci:["Derived, not sourced: a count of rival assets at or beyond the same stage in the same line, from the trial and regulatory domains.","Both"],
+  ss:["Sponsor attributes and commercial-performance history — trial count, prior approvals, R&D and commercialisation spend, launch track record.","Approval + revenue"],
+  ma:["Epidemiology and real-world-market attributes — incidence, stage distribution, treatment rate, treatment mix, price and duration analogues.","Commercial"]
+};
+
+const DOMAINS=[
+ {domain:"Clinical Trials", feeds:"Approval · timing", sources:[
+   {src:"AACT (ClinicalTrials.gov)", geo:"US / Global", cats:[
+     ["Trial Design","Phase; enrollment; arms; randomization; masking; comparator; endpoint type"],
+     ["Development Progress","Start date; primary completion; completion date; recruitment status; termination; trial duration"],
+     ["Development Footprint","# sites; # countries; # US sites; geographic spread; investigator count"],
+     ["Sponsor","Lead sponsor; collaborators; sponsor type; sponsor trial count; historical development activity"],
+     ["Indication","Cancer type; stage; treatment line; biomarker; disease subtype"]]},
+   {src:"ChiCTR", geo:"China", cats:[
+     ["Trial Design","Phase; enrollment; arms; randomization; comparator; endpoints"],
+     ["Development Progress","Start / completion dates; recruitment status; trial duration"],
+     ["Development Footprint","Chinese sites; provinces; institutions; investigators"]]}]},
+ {domain:"Clinical Evidence", feeds:"Approval", sources:[
+   {src:"PubMed / OpenAlex", geo:"Global", cats:[
+     ["Efficacy","ORR; PFS; OS; DoR; hazard ratio; response depth"],
+     ["Safety","Grade 3/4 AEs; discontinuations; deaths; dose reductions"],
+     ["Scientific Momentum","# publications; publication growth; citations; citation velocity"],
+     ["KOL / Institution","# authors; investigator prominence; institution count; top-center involvement"]]}]},
+ {domain:"Regulatory", feeds:"Approval · timing", sources:[
+   {src:"Drugs@FDA / FDA Approvals", geo:"US", cats:[
+     ["Regulatory Outcome","Approved; rejected; withdrawn; discontinued; approval date"],
+     ["Approval Characteristics","Accelerated approval; priority review; breakthrough; orphan designation"],
+     ["Label / Indication","Indication; treatment line; biomarker; mono/combo; patient population"],
+     ["Development Timing","Phase II→III time; Phase III→filing; filing→approval; total time to market"]]},
+   {src:"NMPA / CDE", geo:"China", cats:[
+     ["China Regulatory","IND status; NDA status; approval; priority review; indication; approval date"]]},
+   {src:"Orange Book", geo:"US", cats:[
+     ["Exclusivity / IP","Exclusivity type; expiry; patent count; patent expiry"]]}]},
+ {domain:"Epidemiology", feeds:"Commercial", sources:[
+   {src:"SEER (Oncology)", geo:"US", cats:[
+     ["Disease Population","Annual incidence; prevalence; mortality; survival"],
+     ["Patient Segmentation","Stage distribution; age; sex; race; histology"],
+     ["Market Growth","Incidence growth; prevalence growth; survival trend"]]},
+   {src:"CDC / USCS", geo:"US", cats:[
+     ["Geographic Opportunity","State incidence; state mortality; demographic variation"]]},
+   {src:"Global Burden of Disease", geo:"Global", cats:[
+     ["Global Opportunity","Incidence by country; prevalence; mortality; DALYs; growth"]]}]},
+ {domain:"Real-World Market", feeds:"Commercial", sources:[
+   {src:"CMS Claims", geo:"US", cats:[
+     ["Diagnosed Population","Unique diagnosed patients; new diagnoses; annual patient growth"],
+     ["Treated Population","Treated patients; treatment rate; untreated rate"],
+     ["Patient Journey","Time diagnosis→treatment; treatment sequence; switching; discontinuation"],
+     ["Treatment Mix","Drug use; procedure use; combination use; share by treatment"],
+     ["Provider Behavior","# treating physicians; specialty; patients/provider; concentration"],
+     ["Site of Care","Hospital outpatient; physician office; inpatient; geography"]]}]},
+ {domain:"Commercial Performance", feeds:"Commercial", sources:[
+   {src:"CMS Part B & D Drug Spending", geo:"US", cats:[
+     ["Utilization","Beneficiaries; claims; prescriptions; units"],
+     ["Economics","Total spending; spend/patient; spend/unit; YoY spending growth"],
+     ["Launch Performance","Year 1 patients; Year 1 spending; YoY adoption; penetration trajectory"]]},
+   {src:"SEC EDGAR", geo:"US", cats:[
+     ["Revenue","Product revenue; US revenue; revenue growth; peak revenue"],
+     ["Sponsor Commitment","R&D spending; commercialization spending; partnerships; acquisitions"],
+     ["Management Expectations","TAM estimates; patient estimates; launch expectations"]]},
+   {src:"IQVIA", geo:"US / Global", opt:true, cats:[
+     ["Market Performance","Sales; market share; price; launch trajectory; competitive performance"]]},
+   {src:"Komodo / Optum", geo:"US", opt:true, cats:[
+     ["Market Performance","Patient journey; treated market size; switching; adoption; market share"]]},
+   {src:"Evaluate / Citeline", geo:"Global", opt:true, cats:[
+     ["Market Expectations","Sales forecasts; peak sales; competitive pipeline; consensus expectations"]]}]},
+ {domain:"Other Supporting", feeds:"Both", sources:[
+   {src:"Open Payments", geo:"US", cats:[
+     ["KOL Engagement","# physicians paid; payment amount; research payments; institution network"]]},
+   {src:"USPTO / Patents", geo:"US / Global", cats:[
+     ["IP","Patent count; patent family size; filing date; expiry; remaining protection"]]}]}
+];
+
+/* =====================================================================
+   STATE
+   ===================================================================== */
+let current = null;
+let shareMult=1, leadCQ=78, ciShift=0, activeTab=0;
+
+const SLIDERS={
+  share:{label:"Peak share multiplier", min:0.5, max:2, step:0.05, def:()=>1,
+    get:()=>shareMult, set:v=>shareMult=v, fmt:v=>v.toFixed(2)+"×",
+    hint:"Scales assumed peak share in every indication. The single largest swing factor in the model."},
+  cq:{label:"Clinical Quality — lead", min:40, max:95, step:1, def:()=>current?current.model.BASE[0].f.cq:78,
+    get:()=>leadCQ, set:v=>leadCQ=v, fmt:v=>String(v),
+    hint:"A 30-patient single-arm ORR is carrying this score. A randomised miss would drop it hard."},
+  ci:{label:"Competitive intensity", min:-25, max:10, step:1, def:()=>0,
+    get:()=>ciShift, set:v=>ciShift=v, fmt:v=>(v>0?"+":"")+v,
+    hint:"Shifts crowding across all indications. Negative means rivals drop out or fail."}
+};
+
+/* =====================================================================
+   MODEL
+   ===================================================================== */
+function yearsFor(a){const y0=Math.round(a.predYear)+3, ys=[];for(let y=y0;y<=y0+10;y++)ys.push(y);return ys;}
+
+function model(){
+  const A=current, {BASE,DEAL,DEVCOST,REF}=A.model, PRED=A.predYear, YEARS=yearsFor(A);
+  const rows=BASE.map((d,i)=>{
+    const f={...d.f};
+    if(i===0)f.cq=leadCQ;
+    f.ci=Math.max(0,Math.min(100,f.ci+ciShift));
+    const m=(1+BETA.cq*(f.cq-50)/50)*(1+BETA.dm*(f.dm-50)/50)*
+            (1+BETA.ci*(f.ci-50)/50)*(1+BETA.ss*(f.ss-50)/50);
+    const poa=Math.min(CAP,d.base*m);
+    const t=d.bt*(1-((f.dm-50)/50)*TEFF)+d.fl;
+    const launch=PRED+t, ly=Math.round(launch);
+    const share=Math.max(0,Math.min(0.6,d.share*shareMult));
+    const usPeak=d.pat*share*d.price/1e6;
+    const peak=usPeak*(1+d.uplift);
+    return {...d,f,mult:m,poa,launch,ly,share,peak,rp:peak*poa,path:t};
+  });
+  const build=YEARS.map(y=>{
+    let u=0,r=0;
+    rows.forEach(d=>{
+      const n=y-d.ly+1;
+      const v=n<=0?0:(n>5?d.peak:d.peak*RAMP[n-1]);
+      u+=v; r+=v*d.poa;
+    });
+    return {y,u,r};
+  });
+  const lead=Math.min(...rows.map(d=>d.ly));
+  const cum5=build.filter(b=>b.y>=lead&&b.y<=lead+4).reduce((a,b)=>a+b.r,0);
+  const rpPeak=Math.max(...build.map(b=>b.r)), uPeak=Math.max(...build.map(b=>b.u));
+  const atLeastOne=1-rows.reduce((a,d)=>a*(1-d.poa),1);
+  const totPeak=rows.reduce((a,d)=>a+d.peak,0);
+  const wCI=rows.reduce((a,d)=>a+d.peak*d.f.ci,0)/(totPeak||1);
+  const cScale=Math.min(rpPeak/REF,1);
+  const cSpeed=Math.max(0,1-(rows[0].launch-PRED-3)/7);
+  const cCrowd=1-(wCI/100)*CROWDP;
+  const cos=100*(W.scale*cScale+W.speed*cSpeed+W.crowd*cCrowd);
+  const df=y=>Math.pow(1+DISC,y-PRED);
+  const lastY=YEARS[YEARS.length-1];
+  const pv=build.reduce((a,b)=>a+b.r/df(b.y),0);
+  const tv=build[build.length-1].r*TERM/df(lastY);
+  const pvU=build.reduce((a,b)=>a+b.u/df(b.y),0);
+  const tvU=build[build.length-1].u*TERM/df(lastY);
+  const gav=(pv+tv)*MARGIN, anpv=gav-DEVCOST, net=anpv-DEAL.up;
+  rows.forEach(d=>{
+    const rev=y=>{const n=y-d.ly+1;return n<=0?0:(n>5?d.peak:d.peak*RAMP[n-1]);};
+    const pvi=YEARS.reduce((a,y)=>a+rev(y)*d.poa/df(y),0);
+    const tvi=rev(lastY)*d.poa*TERM/df(lastY);
+    d.rnpv=(pvi+tvi)*MARGIN;
+    d.peakYear=d.ly+RAMP.length-1;
+  });
+  return {rows,build,cum5,rpPeak,uPeak,atLeastOne,cos,cScale,cSpeed,cCrowd,pv,tv,pvU,tvU,gav,anpv,net,lead,totPeak,YEARS,DEAL,DEVCOST,PRED};
+}
+
+/* =====================================================================
+   HELPERS
+   ===================================================================== */
+const $=s=>document.querySelector(s);
+const $$=s=>Array.from(document.querySelectorAll(s));
+const pct=v=>(v*100).toFixed(1)+"%";
+const mm=v=>"$"+Math.round(v).toLocaleString();
+const bn=v=>"$"+(v/1000).toFixed(2)+"bn";
+const half=y=>{const w=Math.floor(y);return (y-w<0.5?"H1":"H2")+" "+w;};
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const tileHTML=t=>`<div class="tile${t.hero?" hero-t":""}"><div class="lab">${t.l}</div><div class="val">${t.v}</div><div class="note">${t.n}</div></div>`;
+const rowHTML=(l,v)=>`<div class="mrow"><span class="ml">${l}</span><span class="mv">${v}</span></div>`;
+const confTag=c=>`<span class="conf ${c}">${c}</span>`;
+const norm=s=>String(s||"").toLowerCase().replace(/[^a-z0-9]/g,"");
+
+/* =====================================================================
+   ASSET SELECTION
+   ===================================================================== */
+function findAsset(q){
+  const n=norm(q); if(!n)return null;
+  const list=Object.values(ASSETS);
+  return list.find(a=>a.aliases.some(x=>norm(x)===n))
+      || list.find(a=>a.aliases.some(x=>norm(x).startsWith(n)||n.startsWith(norm(x))))
+      || null;
+}
+
+function drawRegistry(){
+  const n=Object.keys(ASSETS).length;
+  $("#registry").textContent=`Registry · ${n} asset${n===1?"":"s"} · one row per molecule — code names, partner designations and aliases all resolve to the same record`;
+}
+
+/* combobox: one row per asset, filtered live by any alias, target or originator */
+let menuOpen=false, menuIdx=-1, menuItems=[];
+function matches(a,q){
+  const n=norm(q); if(!n)return true;
+  return [...a.aliases,a.name,a.alt,a.target,a.originator,a.modality].some(x=>norm(x).includes(n));
+}
+function buildMenu(q){
+  menuItems=Object.values(ASSETS).filter(a=>matches(a,q));
+  menuIdx=menuItems.length?0:-1;
+  $("#assetMenu").innerHTML=menuItems.length
+    ? menuItems.map((a,i)=>`<li class="combo-item" role="option" data-id="${a.id}" aria-selected="${i===menuIdx}">
+        <span class="ci-name">${esc(a.name)} <em>/ ${esc(a.alt)}</em></span>
+        <span class="ci-desc">${esc(a.modality)} · ${esc(a.target)} · ${esc(a.originator)}<small>Also ${a.aliases.filter(x=>x!==a.name&&x!==a.alt).map(esc).join(", ")||"—"} · lead setting ${esc(a.leadSetting)}</small></span>
+        <span class="ci-phase">${esc(a.highestPhase)}</span></li>`).join("")
+    : `<li class="combo-item none" role="option" aria-disabled="true">No asset matching “${esc(q)}” in the registry yet</li>`;
+}
+function openMenu(q){buildMenu(q);$("#assetMenu").hidden=false;$("#combo").setAttribute("aria-expanded","true");$("#q").setAttribute("aria-expanded","true");menuOpen=true;}
+function closeMenu(){$("#assetMenu").hidden=true;$("#combo").setAttribute("aria-expanded","false");$("#q").setAttribute("aria-expanded","false");menuOpen=false;}
+function highlight(i){
+  menuIdx=i;
+  const lis=$$("#assetMenu .combo-item[data-id]");
+  lis.forEach((li,k)=>li.setAttribute("aria-selected",String(k===i)));
+  if(lis[i])lis[i].scrollIntoView({block:"nearest"});
+}
+function pickMenu(i){const a=menuItems[i];if(!a)return;closeMenu();selectAsset(a,a.name);}
+
+const qEl=$("#q");
+qEl.addEventListener("focus",()=>openMenu(""));
+qEl.addEventListener("click",()=>{if(!menuOpen)openMenu("");});
+qEl.addEventListener("input",()=>openMenu(qEl.value));
+qEl.addEventListener("blur",()=>closeMenu());
+qEl.addEventListener("keydown",e=>{
+  if(e.key==="ArrowDown"){e.preventDefault();if(!menuOpen)openMenu(qEl.value);else if(menuItems.length)highlight((menuIdx+1)%menuItems.length);}
+  else if(e.key==="ArrowUp"){e.preventDefault();if(menuItems.length)highlight((menuIdx-1+menuItems.length)%menuItems.length);}
+  else if(e.key==="Enter"){
+    e.preventDefault();
+    if(menuOpen&&menuIdx>=0){pickMenu(menuIdx);return;}
+    const q=qEl.value.trim(), a=findAsset(q);
+    closeMenu(); selectAsset(a,q);
+  }
+  else if(e.key==="Escape"){closeMenu();}
+});
+$("#comboToggle").addEventListener("mousedown",e=>e.preventDefault());
+$("#comboToggle").addEventListener("click",()=>{if(menuOpen)closeMenu();else{qEl.focus();openMenu("");}});
+$("#assetMenu").addEventListener("mousedown",e=>e.preventDefault());
+$("#assetMenu").addEventListener("click",e=>{
+  const li=e.target.closest(".combo-item[data-id]"); if(!li)return;
+  pickMenu(menuItems.findIndex(a=>a.id===li.dataset.id));
+});
+
+function drawLookup(A,query){
+  const out=$("#lookupOut");
+  if(!A && !query){
+    out.innerHTML=`<section><div class="noasset" style="display:block">
+      <h3>Start with a molecule</h3>
+      <p>Search above by molecule, code name or partner designation, or pick an asset from the registry. The engine resolves it, pulls the development basics, then scores it across every modelled indication.</p>
+      <div class="pipe" style="text-align:left;margin-top:8px">
+        <div class="step"><div class="num">YOU GET</div><h4>Development basics</h4><p>Trials by phase, where they ran, who sponsored them and who owns the product.</p></div>
+        <div class="step"><div class="num">THEN</div><h4>Approval read</h4><p>Probability of approval and expected launch, per indication.</p></div>
+        <div class="step"><div class="num">THEN</div><h4>Commercial read</h4><p>Risk-adjusted revenue and a benchmark against the deal the market actually did.</p></div>
+      </div></div></section>`;
+    return;
+  }
+  if(!A){
+    const names=Object.values(ASSETS).map(a=>`<b>${esc(a.name)}</b> / ${esc(a.alt)}`).join(", ");
+    out.innerHTML=`<section><div class="notfound">No asset called <b>“${esc(query)}”</b> in the registry yet. The registry currently holds ${names}. A new product is added by appending one record to <span style="font-family:var(--mono)">ASSETS</span> in the page source — identity, rights, trial list and the model inputs the predictor tabs read — and it becomes searchable immediately.</div></section>`;
+    return;
+  }
+  const T=A.trials;
+  const done=T.filter(t=>t.kind==="done").length, live=T.filter(t=>t.kind==="live").length, plan=T.filter(t=>t.kind==="plan").length;
+  const countries={}; T.forEach(t=>t.countries.forEach(c=>{countries[c]=(countries[c]||0)+1;}));
+  const cKeys=Object.keys(countries).sort((a,b)=>countries[b]-countries[a]);
+  const sponsors={}; T.forEach(t=>{const s=sponsors[t.sponsor]||(sponsors[t.sponsor]={n:0,roles:new Set()});s.n++;s.roles.add(t.role);});
+  const phases={}; T.forEach(t=>{phases[t.phase]=(phases[t.phase]||0)+1;});
+  const phaseOrder=["1","1/2","2","2/3","3"];
+  const phaseLine=phaseOrder.filter(p=>phases[p]).map(p=>`Phase ${p} × ${phases[p]}`).join(" · ");
+  const maxC=Math.max(...cKeys.map(c=>countries[c]));
+
+  out.innerHTML=`
+  <section>
+    <div class="eyebrow">Resolved asset</div>
+    <div class="idgrid">
+      <div class="idcell"><div class="l">Molecule</div><div class="v">${esc(A.name)} <span style="color:var(--ink-3)">/ ${esc(A.alt)}</span><small>Also: ${A.aliases.filter(x=>x!==A.name&&x!==A.alt).map(esc).join(", ")||"—"}</small></div></div>
+      <div class="idcell"><div class="l">Modality · target</div><div class="v">${esc(A.modality)}<small>${esc(A.target)}</small></div></div>
+      <div class="idcell"><div class="l">Mechanism</div><div class="v" style="font-size:12.5px;font-weight:400;color:var(--ink-2)">${esc(A.moa)}</div></div>
+      <div class="idcell"><div class="l">Originator</div><div class="v">${esc(A.originator)}<small>${esc(A.originatorLoc)}</small></div></div>
+      <div class="idcell"><div class="l">Highest phase reached</div><div class="v">${esc(A.highestPhase)}<small>${esc(A.leadSetting)}</small></div></div>
+      <div class="idcell"><div class="l">Recommended Phase 3 dose</div><div class="v">${esc(A.rp3d)} ${confTag(A.rp3dConf)}</div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Who owns the product</h2>
+    <p class="lede">Rights by territory. The commercial predictor scores whichever territory the prediction is set to — currently <b>${esc(A.territory)}</b>.</p>
+    <div class="rule"></div>
+    <div class="card" style="padding:6px 8px"><div class="scroll"><table class="left">
+      <thead><tr><th>Territory</th><th>Rights holder</th><th>Basis</th><th>Terms</th></tr></thead>
+      <tbody>${A.rights.map(r=>`<tr>
+        <td>${esc(r.territory)}<span class="sub2">${esc(r.detail)}</span></td>
+        <td><span class="m">${esc(r.holder)}</span></td>
+        <td>${esc(r.basis)} ${confTag(r.conf)}</td>
+        <td>${esc(r.terms)}</td></tr>`).join("")}</tbody>
+    </table></div></div>
+  </section>
+
+  <section>
+    <h2>Trial landscape</h2>
+    <p class="lede">Every registered study on this asset, at every phase, as of the prediction date. <span class="conf sourced">sourced</span> rows are backed by a disclosure in the asset record; <span class="conf inferred">inferred</span> rows are implied by later-stage activity and will be replaced by the registry pull.</p>
+    <div class="tiles">
+      ${tileHTML({l:"Trials on record",v:T.length,n:phaseLine,hero:true})}
+      ${tileHTML({l:"Completed",v:done,n:"Read out or closed"})}
+      ${tileHTML({l:"Ongoing",v:live,n:"Recruiting or active"})}
+      ${tileHTML({l:"Planned / not yet recruiting",v:plan,n:"Authorised, no first patient"})}
+      ${tileHTML({l:"Countries",v:cKeys.length,n:cKeys.join(" · ")})}
+      ${tileHTML({l:"Lead sponsors",v:Object.keys(sponsors).length,n:Object.keys(sponsors).join(" · ")})}
+    </div>
+  </section>
+
+  <section>
+    <div class="card" style="padding:6px 8px"><div class="scroll"><table class="left trials">
+      <thead><tr><th>Study</th><th>Phase</th><th>Indication &amp; design</th><th>Status</th><th>Sponsor</th><th>Geography</th><th>Start → completion</th><th>N</th></tr></thead>
+      <tbody>${T.map(t=>`<tr>
+        <td>${esc(t.id)} ${confTag(t.conf)}<span class="sub2">${esc(t.note)}</span></td>
+        <td><span class="m">${esc(t.phase)}</span></td>
+        <td>${esc(t.ind)}<span class="sub2">${esc(t.design)}</span></td>
+        <td><span class="status ${t.kind}">${esc(t.status)}</span></td>
+        <td>${esc(t.sponsor)}<span class="sub2">${esc(t.role)}</span></td>
+        <td>${t.countries.map(esc).join(", ")}</td>
+        <td><span class="m">${esc(t.start)} → ${esc(t.end)}</span></td>
+        <td><span class="m">${esc(t.n)}</span></td></tr>`).join("")}</tbody>
+    </table></div></div>
+  </section>
+
+  <section>
+    <div class="cols even">
+      <div class="card geo">
+        <h3>Where the trials are</h3>
+        <p class="cap">Studies per country. Site counts populate from the AACT / ChiCTR footprint attributes once the registry pull runs.</p>
+        <div class="bars">${cKeys.map(c=>`<div class="bar"><div class="top"><span>${esc(c)}</span><span>${countries[c]} ${countries[c]===1?"study":"studies"}</span></div>
+          <div class="track"><div class="fill" style="width:${countries[c]/maxC*100}%"></div></div></div>`).join("")}</div>
+      </div>
+      <div class="card">
+        <h3>Who ran them</h3>
+        <p class="cap">Lead sponsor on each study, and the role the sponsor plays on the asset overall.</p>
+        ${Object.entries(sponsors).map(([s,v])=>`<div class="sponsor"><div><div class="sn">${esc(s)}</div><span class="sr">${[...v.roles].map(esc).join(" · ")}</span></div><div class="sc">${v.n} ${v.n===1?"study":"studies"}</div></div>`).join("")}
+        <div class="sponsor"><div><div class="sn">${esc(A.model.DEAL.counterparty)}</div><span class="sr">Licensee, ${esc(A.territory)} · ${mm(A.model.DEAL.up)}m upfront</span></div><div class="sc">deal</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="hero">
+      <div class="eyebrow">Next</div>
+      <h2 style="font-size:20px">Score ${esc(A.name)} at the ${esc(A.scoredAt)}</h2>
+      <p>${A.model.BASE.length} indications are modelled from this record, with the prediction date fixed at ${esc(A.predDate)}. The Prediction Summary tab holds the verdict; the two predictor tabs show the working.</p>
+      <button class="jump primary" data-goto="summary">Run the prediction →</button>
+    </div>
+  </section>`;
+}
+
+function selectAsset(A,query){
+  drawLookup(A,query);
+  if(!A)return;
+  if(A!==current){
+    current=A; activeTab=0;
+    Object.values(SLIDERS).forEach(s=>s.set(s.def()));
+    syncControls();
+  }
+  $("#q").value=A.name;
+  document.body.classList.add("has-asset");
+  drawCtx(); drawStatic(); render();
+}
+
+
+/* =====================================================================
+   HEADER + ASSET-LEVEL STATIC CONTENT
+   ===================================================================== */
+function drawPlatformHeader(){
+  $("#foot").textContent="Sample output built to the PlutoPredict Product Framework. Every figure is modelled from public data available on or before the asset's prediction date and is an illustration of method, not investment advice or a forecast of record. Assumption-driven inputs are flagged in the accompanying workbook with an explicit confidence rating.";
+}
+
+function drawCtx(){
+  const A=current; if(!A)return;
+  document.title=`Clinical Product Predictor — ${A.name}`;
+  $("#ctx").innerHTML=`<span class="ctx-l">Scoring</span>
+    <span class="ctx-name">${esc(A.name)} <em>/ ${esc(A.alt)}</em></span>
+    <span class="ctx-desc">${esc(A.modality)} · ${esc(A.target)} · ${esc(A.originator)} → ${esc(A.model.DEAL.counterparty)}</span>
+    <span class="ctx-chips">
+      <span class="chip">Prediction date · ${esc(A.predDate)}</span>
+      <span class="chip">${esc(A.scoredAt)}</span>
+      <span class="chip">${A.model.BASE.length} indications</span>
+      <span class="chip">${esc(A.territory)}</span>
+      <button class="swap" data-goto="lookup">Change asset</button>
+    </span>`;
+}
+
+function drawStatic(){
+  const A=current;
+  $("#upgrades").innerHTML=A.upgrades.map(([b,t])=>`<li><b>${esc(b)}</b> ${esc(t)}</li>`).join("");
+  $("#downgrades").innerHTML=A.downgrades.map(([b,t])=>`<li><b>${esc(b)}</b> ${esc(t)}</li>`).join("");
+  $("#vreadings").textContent=A.readings;
+  $("#chartHead").textContent="Revenue build, "+A.territory;
+  drawResolved(A);
+}
+
+function drawResolved(A){
+  $("#resHead").textContent=`Resolved for ${A.name} · as of ${A.resolvedAsOf||A.predDate}`;
+  const n=A.resolved.reduce((a,d)=>a+d.rows.length,0);
+  const by={sourced:0,inferred:0,unresolved:0};
+  A.resolved.forEach(d=>d.rows.forEach(r=>{by[r[3]]=(by[r[3]]||0)+1;}));
+  $("#resLede").textContent=`${A.resolved.length} domains · ${n} attributes resolved for ${A.name}: ${by.sourced} sourced, ${by.inferred} inferred, ${by.unresolved} unresolved. Each row gives the specific value, the source it came from, and how confident the record is; where the pull returned nothing the row says so rather than filling the gap.`;
+  $("#resolved").innerHTML=A.resolved.map(d=>`<div class="rescard">
+    <div class="reshead"><span class="dom">${esc(d.domain)}</span><span class="srcs">${esc(d.sources)}</span><span class="feeds">→ ${esc(d.feeds)}</span></div>
+    <div class="scroll"><table class="res-t"><thead><tr><th>Attribute</th><th>Resolved value</th><th>Source</th><th></th></tr></thead><tbody>
+    ${d.rows.map(([a,v,s,c])=>`<tr><td>${esc(a)}</td><td>${esc(v)}</td><td class="srcc">${s?`<a href="${esc(s.u)}" target="_blank" rel="noopener">${esc(s.l)}</a>`:"—"}</td><td class="cc">${confTag(c)}</td></tr>`).join("")}
+    </tbody></table></div></div>`).join("");
+}
+
+/* =====================================================================
+   CONTROLS
+   ===================================================================== */
+function buildControls(sel,keys,withReset){
+  const mount=sel.replace(/\W/g,"");
+  $(sel).innerHTML=keys.map(k=>{
+    const s=SLIDERS[k], id=k+"_"+mount;
+    return `<div class="ctl">
+      <label for="${id}"><span>${s.label}</span> <b data-out="${k}">${s.fmt(s.get())}</b></label>
+      <input type="range" id="${id}" data-k="${k}" min="${s.min}" max="${s.max}" step="${s.step}" value="${s.get()}">
+      <div class="hint">${s.hint}</div>
+    </div>`;
+  }).join("") + (withReset?`<div class="ctl ctl-reset">
+      <button class="reset" data-reset="1">Reset assumptions</button>
+      <div class="hint">Returns all three levers to the base case.</div>
+    </div>`:"");
+}
+function syncControls(){
+  $$("input[data-k]").forEach(i=>{i.value=SLIDERS[i.dataset.k].get();});
+  $$("[data-out]").forEach(b=>{const s=SLIDERS[b.dataset.out];b.textContent=s.fmt(s.get());});
+}
+document.addEventListener("input",e=>{
+  const k=e.target.dataset&&e.target.dataset.k; if(!k)return;
+  SLIDERS[k].set(+e.target.value); syncControls(); render();
+});
+document.addEventListener("click",e=>{
+  if(e.target.dataset&&e.target.dataset.reset){
+    Object.values(SLIDERS).forEach(s=>s.set(s.def())); syncControls(); render();
+  }
+  const go=e.target.dataset&&e.target.dataset.goto;
+  if(go){showTab(go);window.scrollTo({top:0,behavior:"smooth"});}
+});
+
+/* =====================================================================
+   TAB NAV
+   ===================================================================== */
+const PANELS=["map","lookup","architecture","summary","approval","commercial"];
+function showTab(id){
+  if(!PANELS.includes(id))id="map";
+  PANELS.forEach(p=>{$("#p-"+p).hidden = p!==id;});
+  $$("#tabnav .navtab").forEach(b=>b.setAttribute("aria-selected",String(b.dataset.panel===id)));
+  $("#ctx").hidden = !current || !["summary","approval","commercial"].includes(id);
+  if(location.hash.slice(1)!==id){try{history.replaceState(null,"","#"+id);}catch(e){}}
+}
+$$("#tabnav .navtab").forEach((b,i,all)=>{
+  b.onclick=()=>showTab(b.dataset.panel);
+  b.onkeydown=e=>{
+    const d=e.key==="ArrowRight"?1:e.key==="ArrowLeft"?-1:0;
+    if(!d)return;
+    e.preventDefault();
+    const n=all[(i+d+all.length)%all.length];
+    n.focus(); showTab(n.dataset.panel);
+  };
+});
+window.addEventListener("hashchange",()=>showTab(location.hash.slice(1)));
+
+/* =====================================================================
+   PRODUCT TAB (framework-level, drawn once)
+   ===================================================================== */
+function drawFeatureTable(){
+  $("#featTbl").innerHTML=FEATS.map(([k,label])=>{
+    const w=BETA[k];
+    return `<tr><td>${label}</td><td style="text-align:left;font-family:var(--sans);font-size:12.5px;color:var(--ink-2)">${FEATDOC[k][0]}</td>
+      <td style="text-align:left;font-size:12px;color:var(--ink-3)">${FEATDOC[k][1]}</td>
+      <td>${w===undefined?"—":(w>0?"+":"")+w.toFixed(2)}</td></tr>`;
+  }).join("");
+}
+function drawArch(){
+  let html="",nSrc=0,nCat=0;
+  DOMAINS.forEach(d=>{
+    const rows=d.sources.reduce((a,s)=>a+s.cats.length,0);
+    let first=true;
+    d.sources.forEach(s=>{
+      nSrc++;
+      s.cats.forEach((c,ci)=>{
+        nCat++;
+        html+=`<tr${first?' class="groupstart"':""}>`;
+        if(first)html+=`<td class="dom" rowspan="${rows}">${d.domain}<span class="feeds">→ ${d.feeds}</span></td>`;
+        if(ci===0)html+=`<td class="src${s.opt?" opt":""}" rowspan="${s.cats.length}">${s.src}${s.opt?' <em>optional</em>':""}<span class="geo">${s.geo}</span></td>`;
+        html+=`<td class="cat">${c[0]}</td><td class="att">${c[1]}</td></tr>`;
+        first=false;
+      });
+    });
+  });
+  $("#archTbl tbody").innerHTML=html;
+  $("#archLede").textContent=`${DOMAINS.length} data domains · ${nSrc} source datasets · ${nCat} attribute categories. Every source the engine draws on, the attribute categories it yields, and the raw features underneath.`;
+}
+
+/* =====================================================================
+   LIVE RENDERS
+   ===================================================================== */
+function drawTiles(M){
+  $("#tilesBig").innerHTML=[
+    {l:"Risk-adjusted NPV · "+esc(current.territory),v:(M.anpv<0?"−":"")+bn(Math.abs(M.anpv)),n:"Predicted current value of the asset after "+mm(M.DEVCOST)+"m remaining development cost — independent of any deal",hero:true},
+    {l:"Probability of approval · lead indication",v:pct(M.rows[0].poa),n:M.rows[0].name+", from a "+M.rows[0].stage.split(" ")[0]+" "+M.rows[0].stage.split(" ")[1]+" base rate · "+pct(M.atLeastOne)+" for at least one of "+M.rows.length,hero:true}
+  ].map(tileHTML).join("");
+  if(M.anpv<0)$("#tilesBig .tile .val").style.color="var(--neg)";
+  $("#tiles").innerHTML=[
+    {l:"Probability of at least<br>one approval",v:pct(M.atLeastOne),n:"Across all "+M.rows.length+" modelled indications"},
+    {l:"Expected launch<br>lead indication",v:half(M.rows[0].launch),n:current.territory+", from a "+M.rows[0].bt.toFixed(1)+"-year pivotal path"},
+    {l:"Cumulative revenue<br>first 5 years",v:bn(M.cum5),n:"Risk-adjusted, from "+M.lead},
+    {l:"Peak sales<br>risk-adjusted",v:bn(M.rpPeak),n:"Unrisked would be "+bn(M.uPeak)}
+  ].map(tileHTML).join("");
+}
+
+function verdictHead(gap,DEAL){
+  return gap<0 ? "The model does not clear the cheque"
+    : (gap < DEAL.up*0.25 ? "The model barely clears the cheque" : "The model clears the cheque with room");
+}
+
+function drawSummary(M){
+  $("#sumApproval").innerHTML=
+    rowHTML("PoA · lead indication",pct(M.rows[0].poa))+
+    rowHTML("PoA · at least one of "+M.rows.length,pct(M.atLeastOne))+
+    rowHTML("Expected launch · lead",half(M.rows[0].launch))+
+    rowHTML("Strongest indication",M.rows.reduce((a,b)=>b.poa>a.poa?b:a).name)+
+    rowHTML("Weakest indication",M.rows.reduce((a,b)=>b.poa<a.poa?b:a).name);
+
+  $("#sumCommercial").innerHTML=
+    rowHTML("Peak sales · unrisked",bn(M.uPeak))+
+    rowHTML("Peak sales · risk-adjusted",bn(M.rpPeak))+
+    rowHTML("Cumulative revenue · 5 yrs",bn(M.cum5))+
+    rowHTML("Asset rNPV",(M.anpv<0?"−":"")+bn(Math.abs(M.anpv)))+
+    rowHTML("Value-weighted probability of approval",pct((M.pvU+M.tvU)>0?(M.pv+M.tv)/(M.pvU+M.tvU):0));
+}
+
+function drawApprovalTiles(M){
+  const best=M.rows.reduce((a,b)=>b.poa>a.poa?b:a);
+  $("#apprTiles").innerHTML=[
+    {l:"Probability of approval<br>lead indication",v:pct(M.rows[0].poa),n:M.rows[0].stage+" · base rate "+pct(M.rows[0].base),hero:true},
+    {l:"Probability of at least<br>one approval",v:pct(M.atLeastOne),n:"Assumes independence across the "+M.rows.length},
+    {l:"Expected launch<br>lead indication",v:half(M.rows[0].launch),n:M.rows[0].path.toFixed(1)+" years from prediction date"},
+    {l:"Highest-probability<br>indication",v:pct(best.poa),n:best.name}
+  ].map(tileHTML).join("");
+}
+
+function drawCommercialTiles(M){
+  $("#commTiles").innerHTML=[
+    {l:"Peak sales<br>risk-adjusted",v:bn(M.rpPeak),n:"Unrisked would be "+bn(M.uPeak),hero:true},
+    {l:"Cumulative revenue<br>first 5 years",v:bn(M.cum5),n:"Risk-adjusted, from "+M.lead},
+    {l:"Peak share reached<br>lead indication",v:M.rows[0].peakYear,n:RAMP.length+"-year ramp from a "+half(M.rows[0].launch)+" launch"},
+    {l:"Commercial<br>opportunity score",v:Math.round(M.cos),n:"Scale "+M.cScale.toFixed(2)+" · speed "+M.cSpeed.toFixed(2)+" · crowding "+M.cCrowd.toFixed(2),hero:true}
+  ].map(tileHTML).join("");
+}
+
+function drawNPV(M){
+  const A=current, U=M.pvU+M.tvU, R=M.pv+M.tv, wPoA=U>0?R/U:0;
+  const signed=v=>(v<0?"−":"")+mm(Math.abs(v))+"m";
+  $("#npvTiles").innerHTML=[
+    {l:"Asset rNPV<br>"+esc(A.territory),v:(M.anpv<0?"−":"")+bn(Math.abs(M.anpv)),n:"Predicted current value, after "+mm(M.DEVCOST)+"m remaining development cost",hero:true},
+    {l:"Gross rNPV<br>before development cost",v:bn(M.gav),n:(DISC*100).toFixed(0)+"% discount · "+(MARGIN*100).toFixed(0)+"% operating margin"},
+    {l:"Risk-adjusted<br>revenue PV",v:bn(R),n:"Unrisked would be "+bn(U)+" · terminal "+bn(M.tv)},
+    {l:"Value-weighted<br>probability of approval",v:pct(wPoA),n:"Share of unrisked value that survives approval risk"},
+    {l:"Peak share reached<br>lead indication",v:M.rows[0].peakYear,n:half(M.rows[0].launch)+" launch · "+(M.rows[0].peakYear-M.PRED).toFixed(1)+" yrs from prediction date"}
+  ].map(tileHTML).join("");
+  if(M.anpv<0)$("#npvTiles .tile.hero-t .val").style.color="var(--neg)";
+
+  // waterfall — deal terms deliberately absent; they are benchmarked against this number, not part of it
+  const steps=[
+    {l:"Unrisked PV",v:U,t:"total"},
+    {l:"Approval risk",v:-(U-R),t:"delta"},
+    {l:"Risk-adj PV",v:R,t:"total"},
+    {l:"Margin "+(MARGIN*100).toFixed(0)+"%",v:-R*(1-MARGIN),t:"delta"},
+    {l:"Gross rNPV",v:M.gav,t:"total"},
+    {l:"Dev cost",v:-M.DEVCOST,t:"delta"},
+    {l:"Asset rNPV",v:M.anpv,t:"total"}
+  ];
+  const W=520,H=270,P={t:16,r:10,b:40,l:50};
+  const iw=W-P.l-P.r, ih=H-P.t-P.b;
+  let run=0, lo=0, hi=0;
+  const segs=steps.map(s=>{
+    let a,b;
+    if(s.t==="total"){a=0;b=s.v;run=s.v;}else{a=run;b=run+s.v;run=b;}
+    lo=Math.min(lo,a,b); hi=Math.max(hi,a,b);
+    return {...s,a,b};
+  });
+  hi*=1.06; if(lo<0)lo*=1.12;
+  const y=v=>P.t+ih-((v-lo)/(hi-lo))*ih;
+  const slot=iw/steps.length, bw=slot*0.62;
+  let g="";
+  for(let i=0;i<=4;i++){
+    const v=lo+(hi-lo)*i/4, yy=y(v);
+    g+=`<line x1="${P.l}" y1="${yy}" x2="${W-P.r}" y2="${yy}" stroke="var(--grid)"/>
+        <text x="${P.l-6}" y="${yy+3.5}" text-anchor="end" font-family="var(--mono)" font-size="8.5" fill="var(--ink-3)">${Math.abs(v)>=1000?(v/1000).toFixed(1)+"bn":Math.round(v)}</text>`;
+  }
+  g+=`<line x1="${P.l}" y1="${y(0)}" x2="${W-P.r}" y2="${y(0)}" stroke="var(--line-2)" stroke-width="1.2"/>`;
+  let bars="";
+  segs.forEach((s,i)=>{
+    const x=P.l+slot*i+(slot-bw)/2, top=Math.min(y(s.a),y(s.b)), h=Math.max(1.5,Math.abs(y(s.a)-y(s.b)));
+    const fill=s.t==="total"?(s.b<0?"var(--neg)":"var(--accent)"):(s.v<0?"var(--warn)":"var(--pos)");
+    const op=s.t==="total"?1:0.85;
+    bars+=`<rect x="${x}" y="${top}" width="${bw}" height="${h}" rx="2" fill="${fill}" opacity="${op}"><title>${s.l}: ${signed(s.v)}</title></rect>
+      <text x="${x+bw/2}" y="${top-4}" text-anchor="middle" font-family="var(--mono)" font-size="8.5" font-weight="600" fill="var(--ink-2)">${s.t==="total"?bn(s.b):signed(s.v)}</text>`;
+    const words=s.l.split(" ");
+    words.forEach((w,k)=>{bars+=`<text x="${x+bw/2}" y="${H-P.b+13+k*10}" text-anchor="middle" font-family="var(--mono)" font-size="8" fill="var(--ink-3)">${w}</text>`;});
+    if(i<segs.length-1&&s.t!=="total"){/* connector */}
+    if(i<segs.length-1){const nx=P.l+slot*(i+1)+(slot-bw)/2;bars+=`<line x1="${x+bw}" y1="${y(s.b)}" x2="${nx}" y2="${y(s.b)}" stroke="var(--line-2)" stroke-dasharray="2 2"/>`;}
+  });
+  $("#npvWater").innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="NPV waterfall">${g}${bars}</svg>`;
+
+  // by indication
+  const tot=M.rows.reduce((a,d)=>a+d.rnpv,0);
+  $("#npvTbl tbody").innerHTML=M.rows.map(d=>`<tr>
+    <td>${d.name}<span class="stage">${d.stage}</span></td>
+    <td>${pct(d.poa)}</td><td>${half(d.launch)}</td><td>${d.peakYear}</td>
+    <td>${mm(d.rnpv)}</td><td>${tot>0?pct(d.rnpv/tot):"—"}</td></tr>`).join("")+
+    `<tr><td>Gross rNPV, all indications</td><td>${pct(M.atLeastOne)}</td><td>${half(Math.min(...M.rows.map(d=>d.launch)))}</td><td>${Math.min(...M.rows.map(d=>d.peakYear))}</td><td>${mm(tot)}</td><td>100%</td></tr>
+     <tr><td>Remaining development cost<span class="stage">Risk-adjusted, all indications</span></td><td>—</td><td>—</td><td>—</td><td>−${mm(M.DEVCOST)}</td><td>—</td></tr>
+     <tr class="tot"><td>Asset rNPV</td><td>—</td><td>—</td><td>—</td><td>${(M.anpv<0?"−":"")+mm(Math.abs(M.anpv))}</td><td>—</td></tr>`;
+
+  $("#npvNote").textContent=`Method: each indication's revenue ramps ${RAMP.map(r=>Math.round(r*100)+"%").join(" → ")} of peak over ${RAMP.length} years from its predicted launch, is multiplied by that indication's probability of approval, and is discounted at ${(DISC*100).toFixed(0)}% to the prediction date (${A.predDate}). A terminal value of ${TERM.toFixed(1)}× final-year risk-adjusted revenue is added, a ${(MARGIN*100).toFixed(0)}% operating margin applied, and the remaining risk-adjusted development cost deducted. Approval risk alone removes ${bn(U-R)} of the ${bn(U)} unrisked value. No deal term enters this number — the licence is compared against it in the benchmark section below.`;
+}
+
+function drawFormula(M){
+  const d=M.rows[0];
+  const term=(k,label)=>`(1 ${BETA[k]>0?"+":"−"} ${Math.abs(BETA[k]).toFixed(2)} × <span class="c">${label}</span>)`;
+  $("#formula").innerHTML=
+    `<b>PoA</b> = min( ${(CAP*100).toFixed(0)}% ,  base rate × ${term("cq","CQ")} ${term("dm","DM")} ${term("ci","CI")} ${term("ss","SS")} )<br>
+     <span style="color:var(--ink-3)">where each feature enters centred on 50 and scaled: (score − 50) ÷ 50</span><br><br>
+     <b>Lead indication</b> · ${pct(d.base)} × ${d.mult.toFixed(3)} = ${pct(Math.min(CAP,d.base*d.mult))}${d.base*d.mult>CAP?' <span style="color:var(--warn)">— cap binding</span>':""}<br>
+     <b>Launch</b> = prediction date + pivotal path × (1 − DM effect) + filing lag = <span class="c">${half(d.launch)}</span>`;
+}
+
+function drawTabs(M){
+  $("#tabs").innerHTML=M.rows.map((d,i)=>
+    `<button class="tab" role="tab" aria-selected="${i===activeTab}" data-i="${i}">${d.name}</button>`).join("");
+  $("#tabs").querySelectorAll(".tab").forEach(b=>b.onclick=()=>{activeTab=+b.dataset.i;render();});
+}
+
+function drawBars(M){
+  const d=M.rows[activeTab]||M.rows[0];
+  $("#bars").innerHTML=FEATS.map(([k,label])=>{
+    const v=d.f[k], inv=k==="ci";
+    return `<div class="bar"><div class="top"><span>${label}${inv?" <span style='color:var(--ink-3)'>(higher is worse)</span>":""}</span><span>${Math.round(v)}</span></div>
+    <div class="track"><div class="fill${inv?" inv":""}" style="width:${v}%"></div></div>
+    <div class="why">${d.why[k]}</div></div>`;
+  }).join("");
+}
+
+function drawPoaChart(M){
+  const W=520,H=250,P={t:12,r:14,b:24,l:150};
+  const iw=W-P.l-P.r, rowH=(H-P.t-P.b)/M.rows.length;
+  const max=Math.max(CAP,...M.rows.map(d=>d.poa))*1.05;
+  let g="";
+  for(let i=0;i<=4;i++){
+    const v=max*i/4, xx=P.l+(v/max)*iw;
+    g+=`<line x1="${xx}" y1="${P.t}" x2="${xx}" y2="${P.t+rowH*M.rows.length}" stroke="var(--grid)" stroke-width="1"/>
+        <text x="${xx}" y="${H-8}" text-anchor="middle" font-family="var(--mono)" font-size="9" fill="var(--ink-3)">${Math.round(v*100)}%</text>`;
+  }
+  let body="";
+  M.rows.forEach((d,i)=>{
+    const yc=P.t+rowH*i+rowH/2;
+    const wb=(d.base/max)*iw, wp=(d.poa/max)*iw;
+    body+=`<text x="${P.l-10}" y="${yc-3}" text-anchor="end" font-family="var(--sans)" font-size="10.5" fill="var(--ink-2)">${d.name}</text>
+      <text x="${P.l-10}" y="${yc+9}" text-anchor="end" font-family="var(--mono)" font-size="8.5" fill="var(--ink-3)">${d.stage}</text>
+      <rect x="${P.l}" y="${yc-9}" width="${wb}" height="7" rx="2" fill="var(--line-2)"><title>${d.name} base rate ${pct(d.base)}</title></rect>
+      <rect x="${P.l}" y="${yc+1}" width="${wp}" height="7" rx="2" fill="var(--accent)"><title>${d.name} PoA ${pct(d.poa)}</title></rect>
+      <text x="${P.l+wp+6}" y="${yc+7.5}" font-family="var(--mono)" font-size="9.5" font-weight="600" fill="var(--accent)">${pct(d.poa)}</text>`;
+  });
+  const capX=P.l+(CAP/max)*iw;
+  body+=`<line x1="${capX}" y1="${P.t}" x2="${capX}" y2="${P.t+rowH*M.rows.length}" stroke="var(--warn)" stroke-width="1" stroke-dasharray="3 3"/>
+    <text x="${capX-4}" y="${P.t+9}" text-anchor="end" font-family="var(--mono)" font-size="8.5" fill="var(--warn)">CAP ${(CAP*100).toFixed(0)}%</text>`;
+  $("#poaChart").innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Probability of approval by indication">${g}${body}</svg>`;
+}
+
+function drawChart(M){
+  const W=760,H=300,P={t:14,r:12,b:30,l:52};
+  const iw=W-P.l-P.r, ih=H-P.t-P.b;
+  const max=Math.max(...M.build.map(b=>b.u),1)*1.08;
+  const x=i=>P.l+(i/(M.build.length-1))*iw;
+  const y=v=>P.t+ih-(v/max)*ih;
+  const bw=Math.max(6,iw/M.build.length*0.46);
+  let g="";
+  for(let i=0;i<=4;i++){
+    const v=max*i/4, yy=y(v);
+    g+=`<line x1="${P.l}" y1="${yy}" x2="${W-P.r}" y2="${yy}" stroke="var(--grid)" stroke-width="1"/>
+        <text x="${P.l-8}" y="${yy+3.5}" text-anchor="end" font-family="var(--mono)" font-size="9" fill="var(--ink-3)">${v>=1000?(v/1000).toFixed(1)+"bn":Math.round(v)}</text>`;
+  }
+  let bars="",lbl="";
+  M.build.forEach((b,i)=>{
+    const h=Math.max(0,P.t+ih-y(b.u));
+    bars+=`<rect x="${x(i)-bw/2}" y="${y(b.u)}" width="${bw}" height="${h}" rx="2" fill="var(--line-2)" opacity="0.75"><title>${b.y} unrisked ${mm(b.u)}m</title></rect>`;
+    lbl+=`<text x="${x(i)}" y="${H-10}" text-anchor="middle" font-family="var(--mono)" font-size="9" fill="var(--ink-3)">${String(b.y).slice(2)}</text>`;
+  });
+  const path=M.build.map((b,i)=>(i?"L":"M")+x(i).toFixed(1)+" "+y(b.r).toFixed(1)).join(" ");
+  const dots=M.build.map((b,i)=>`<circle cx="${x(i)}" cy="${y(b.r)}" r="2.6" fill="var(--accent)"><title>${b.y} risk-adjusted ${mm(b.r)}m</title></circle>`).join("");
+  $("#chart").innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Revenue build ${M.YEARS[0]} to ${M.YEARS[M.YEARS.length-1]}">
+    ${g}${bars}<path d="${path}" fill="none" stroke="var(--accent)" stroke-width="2.2" stroke-linejoin="round"/>${dots}${lbl}</svg>`;
+}
+
+function drawApprovalTable(M){
+  $("#apprTbl tbody").innerHTML=M.rows.map(d=>`<tr>
+    <td>${d.name}<span class="stage">${d.stage}</span></td>
+    <td>${pct(d.base)}</td>
+    <td>${d.mult.toFixed(3)}×</td>
+    <td${d.base*d.mult>CAP?' style="color:var(--warn)"':""}>${pct(d.poa)}</td>
+    <td>${d.path.toFixed(1)}</td>
+    <td>${half(d.launch)}</td></tr>`).join("")+
+    `<tr class="tot"><td>At least one approval</td><td>—</td><td>—</td><td>${pct(M.atLeastOne)}</td>
+     <td>—</td><td>${half(Math.min(...M.rows.map(d=>d.launch)))}</td></tr>`;
+}
+
+function drawTable(M){
+  const tot=M.rows.reduce((a,d)=>({pat:a.pat+d.pat,peak:a.peak+d.peak,rp:a.rp+d.rp}),{pat:0,peak:0,rp:0});
+  $("#tbl tbody").innerHTML=M.rows.map(d=>`<tr>
+    <td>${d.name}<span class="stage">${d.stage}</span></td>
+    <td>${Math.round(d.pat).toLocaleString()}</td>
+    <td>${pct(d.share)}</td>
+    <td>${mm(d.peak)}</td>
+    <td>${pct(d.poa)}</td>
+    <td>${d.launch.toFixed(1)}</td>
+    <td>${mm(d.rp)}</td></tr>`).join("")+
+    `<tr class="tot"><td>All indications</td><td>${Math.round(tot.pat).toLocaleString()}</td><td>—</td>
+    <td>${mm(tot.peak)}</td><td>${pct(M.atLeastOne)}</td><td>—</td><td>${mm(tot.rp)}</td></tr>`;
+}
+
+function drawVerdict(M){
+  const DEAL=M.DEAL, ratio=(DEAL.up+DEAL.ms)/M.rpPeak, upr=DEAL.up/M.rpPeak;
+  const cells=[
+    ["Asset rNPV (model)",(M.anpv<0?"−":"")+bn(Math.abs(M.anpv))],
+    ["Headline deal value",bn(DEAL.up+DEAL.ms)],
+    ["Upfront, non-contingent",mm(DEAL.up)+"m"],
+    ["Headline / risk-adj peak",ratio.toFixed(1)+"×"],
+    ["Upfront / risk-adj peak",upr.toFixed(2)+"×"],
+    ["Asset rNPV less upfront",(M.net<0?"−":"")+mm(Math.abs(M.net))+"m"]
+  ];
+  $("#vgrid").innerHTML=cells.map(([l,v],i)=>
+    `<div class="vcell"><div class="l">${l}</div><div class="v"${i===5?` style="color:var(--${M.net<0?"neg":"pos"})"`:""}>${v}</div></div>`).join("");
+  const gap=M.net;
+  $("#vhead").textContent=verdictHead(gap,DEAL);
+  $("#vbody").innerHTML = `The model puts the ${esc(current.territory)} asset at <b>${(M.anpv<0?"−":"")+bn(Math.abs(M.anpv))}</b> today — the risk-adjusted NPV above, which does not depend on the deal. Set the ${mm(DEAL.up)}m upfront against it and the licensee is left with <b>${(gap<0?"−":"")+mm(Math.abs(gap))}m</b> of value before a single contingent milestone or royalty dollar is paid. On a headline basis the deal prices at <b>${ratio.toFixed(1)}×</b> modelled risk-adjusted peak, against a 3–5× norm for mid-stage oncology.`;
+}
+
+function render(){
+  if(!current)return;
+  const M=model();
+  drawTiles(M); drawSummary(M);
+  drawApprovalTiles(M); drawFormula(M); drawTabs(M); drawBars(M); drawPoaChart(M); drawApprovalTable(M);
+  drawNPV(M); drawCommercialTiles(M); drawChart(M); drawTable(M); drawVerdict(M);
+}
+
+/* =====================================================================
+   ASSET MAP
+   Stylised world map (simplified outlines, equirectangular) with trial
+   geography for every registry asset plus the class comparators.
+   ===================================================================== */
+const GEO={
+  "United States":[39,-98],"Canada":[56,-106],"Brazil":[-10,-55],
+  "United Kingdom":[54,-2],"France":[46.5,2.5],"Germany":[51,10],"Italy":[42.5,12.5],"Spain":[40,-4],
+  "Switzerland":[46.8,8.2],"Denmark":[56,10],"Netherlands":[52.2,5.3],"Belgium":[50.8,4.5],"Sweden":[62,15],
+  "China":[35,105],"Japan":[36,138],"South Korea":[36.5,128],"Taiwan":[23.7,121],"India":[21,78],"Australia":[-25,134],
+  "Türkiye":[39,35],"Puerto Rico":[18.2,-66.5],"Multiregional":[-28,-25]
+};
+
+// [lon,lat] rings — deliberately low-poly; the map is a backdrop, not a GIS layer
+const LAND=[
+ [[-168,66],[-162,70],[-150,71],[-140,70],[-128,70],[-115,69],[-105,68],[-95,72],[-85,70],[-80,73],[-70,70],[-64,60],[-56,52],[-60,47],[-66,45],[-70,42],[-74,40],[-76,35],[-81,31],[-80,26],[-82,28],[-85,30],[-90,29],[-94,29],[-97,26],[-97,22],[-92,18],[-90,21],[-87,21],[-88,16],[-84,13],[-83,9],[-79,8],[-82,10],[-86,12],[-91,14],[-96,16],[-105,20],[-108,24],[-112,29],[-115,32],[-118,34],[-121,36],[-124,40],[-124,46],[-125,49],[-130,54],[-134,58],[-140,60],[-147,61],[-152,59],[-156,57],[-162,58],[-166,61]],
+ [[-56,60],[-44,60],[-30,68],[-20,73],[-20,80],[-35,83],[-60,82],[-70,78],[-68,72],[-60,66]],
+ [[-79,8],[-75,11],[-71,12],[-64,11],[-60,8],[-52,5],[-50,0],[-44,-2],[-38,-4],[-35,-7],[-37,-12],[-39,-16],[-40,-21],[-45,-24],[-48,-28],[-52,-33],[-57,-37],[-62,-39],[-64,-43],[-66,-47],[-68,-51],[-70,-54],[-73,-52],[-74,-46],[-73,-40],[-72,-34],[-71,-28],[-70,-22],[-72,-17],[-76,-13],[-79,-7],[-81,-4],[-80,0],[-78,3],[-77,7]],
+ [[-17,15],[-17,20],[-14,26],[-10,30],[-6,35],[0,36],[10,37],[11,34],[15,32],[20,31],[25,32],[31,31],[34,28],[36,23],[38,18],[41,14],[43,11],[48,11],[51,12],[50,8],[46,3],[41,-2],[40,-8],[37,-14],[35,-20],[33,-26],[30,-31],[25,-34],[19,-35],[17,-32],[15,-27],[12,-20],[12,-12],[12,-5],[9,0],[9,4],[4,6],[-1,5],[-5,5],[-8,4],[-12,7],[-15,11]],
+ [[-9,37],[-9,43],[-2,44],[-4,48],[0,50],[4,52],[8,54],[8,57],[11,57],[12,56],[11,59],[5,58],[5,62],[13,65],[17,69],[25,71],[31,70],[41,67],[44,66],[52,68],[60,69],[70,73],[80,73],[95,76],[110,77],[130,72],[150,70],[170,69],[180,66],[180,62],[172,61],[164,60],[160,56],[156,51],[152,59],[143,59],[140,54],[137,48],[131,43],[129,40],[129,36],[126,35],[126,38],[122,40],[118,39],[122,32],[121,28],[117,23],[112,21],[108,21],[106,16],[109,12],[105,9],[103,1],[101,3],[100,7],[98,10],[98,16],[94,19],[92,22],[88,22],[85,19],[80,15],[80,9],[77,8],[73,16],[72,21],[68,24],[62,25],[57,26],[56,24],[59,22],[57,18],[52,17],[49,14],[44,13],[42,15],[39,18],[37,22],[35,27],[33,30],[35,32],[36,36],[31,37],[27,37],[26,40],[23,38],[22,37],[19,40],[16,38],[15,40],[12,42],[10,44],[8,44],[5,43],[3,42],[0,40],[-1,37],[-5,36]],
+ [[114,-22],[114,-34],[118,-35],[124,-33],[130,-32],[137,-35],[140,-38],[146,-39],[150,-37],[153,-30],[153,-25],[147,-19],[142,-11],[136,-12],[131,-12],[126,-14],[122,-18]],
+ [[-6,50],[1,51],[2,53],[-1,56],[-3,59],[-6,58],[-5,55]],
+ [[-10,52],[-6,52],[-6,55],[-10,54]],
+ [[130,31],[131,34],[135,34],[140,35],[141,39],[141,41],[140,43],[142,45],[145,44],[142,42],[141,38],[140,36],[137,34],[133,33]],
+ [[95,5],[103,1],[106,-6],[104,-4],[100,0]],
+ [[109,1],[113,4],[117,7],[119,2],[117,-3],[113,-3],[110,-2]],
+ [[105,-6],[114,-8],[114,-9],[106,-7]],
+ [[131,-1],[137,-2],[141,-3],[147,-6],[150,-10],[143,-9],[138,-8],[134,-4]],
+ [[120,18],[122,18],[124,13],[126,8],[124,6],[121,10],[120,14]],
+ [[44,-13],[49,-13],[50,-16],[48,-24],[45,-25],[43,-20]],
+ [[120,22],[121,25],[122,25],[121,22]],
+ [[166,-45],[169,-47],[174,-42],[178,-38],[175,-35],[173,-39],[172,-43]],
+ [[-22,64],[-14,64],[-14,66],[-22,66]],
+ [[-85,22],[-78,20],[-74,20],[-76,21],[-82,23]],
+ [[80,6],[82,7],[81,10],[80,9]]
+];
+
+// Geography → company → asset. Geography is the origin of the asset: where the
+// originating company is headquartered. Licensed assets stay with the originator.
+// Illustrative sample, not a complete pipeline; conf tags say what was researched here.
+const ORIGINS=[
+ {country:"China", companies:[
+   {name:"RemeGen", hq:"Yantai", assets:[
+     {reg:"rc148", name:"RC148", alt:"ABBV-1480", modality:"Bispecific antibody", target:"PD-1 × VEGF", phase:"3", ind:"1L squamous NSCLC; NSCLC, colorectal, gastric / GEJ", status:"China Phase 3 recruiting; AbbVie global Phase 3 posted for 22 Sep 2026", licensee:"AbbVie, ex-Greater China", conf:"sourced"},
+     {name:"RC118", modality:"ADC", target:"CLDN18.2", phase:"1/2", ind:"Gastric / GEJ, pancreatic", status:"Phase 1/2 with toripalimab or RC148", conf:"sourced"},
+     {name:"RC88", modality:"ADC", target:"Mesothelin", phase:"2", ind:"Ovarian, NSCLC", status:"Phase 2", conf:"inferred"},
+     {name:"Disitamab vedotin", alt:"RC48", modality:"ADC", target:"HER2", phase:"3", ind:"Urothelial, gastric, breast", status:"Approved in China; global Phase 3 with Pfizer", licensee:"Pfizer, ex-Asia", conf:"inferred"}
+   ]},
+   {name:"Akeso", hq:"Zhongshan", assets:[
+     {name:"Ivonescimab", alt:"AK112 / SMT112", modality:"Bispecific antibody", target:"PD-1 × VEGF", phase:"3", ind:"NSCLC across lines; other solid tumours", status:"Three NMPA approvals; US BLA with PDUFA 14 Nov 2026", licensee:"Summit — US, Canada, Europe, Japan", conf:"sourced", trials:[
+       {id:"HARMONi-6", phase:"3", ind:"1L squamous NSCLC + chemo vs tislelizumab + chemo", status:"Complete — NMPA approved 12 Aug 2026 · OS HR 0.66", n:"532", countries:["China"], conf:"sourced"},
+       {id:"HARMONi-2", phase:"3", ind:"1L PD-L1-positive NSCLC monotherapy vs pembrolizumab", status:"Complete — NMPA approved Apr 2025", countries:["China"], conf:"sourced"},
+       {id:"HARMONi", phase:"3", ind:"EGFR-mutant NSCLC after TKI, + chemo", status:"Complete — US BLA accepted, PDUFA 14 Nov 2026", countries:["United States","Canada","China"], conf:"inferred"},
+       {id:"HARMONi-3", phase:"3", ind:"1L NSCLC + chemo vs pembrolizumab + chemo", status:"Ongoing — squamous interim PFS missed threshold May 2026", countries:["United States","Canada","China"], conf:"inferred"},
+       {id:"HARMONi-7", phase:"3", ind:"1L PD-L1-high NSCLC monotherapy vs pembrolizumab", status:"Enrolling", countries:["Multiregional"], conf:"inferred"}
+     ]},
+     {name:"Cadonilimab", alt:"AK104", modality:"Bispecific antibody", target:"PD-1 × CTLA-4", phase:"3", ind:"Cervical, gastric, HCC", status:"Approved in China; Phase 3 ongoing", conf:"inferred"},
+     {name:"Ligufalimab", alt:"AK117", modality:"Monoclonal antibody", target:"CD47", phase:"3", ind:"MDS, AML, solid tumours", status:"Phase 3", conf:"inferred"}
+   ]},
+   {name:"3SBio", hq:"Shenyang", assets:[
+     {name:"SSGJ-707", alt:"PF-08634404", modality:"Bispecific antibody", target:"PD-1 × VEGF", phase:"3", ind:"1L NSCLC, colorectal", status:"Pfizer global Phase 3 Symbiotic-Lung-01; China Phase 3", licensee:"Pfizer, ex-China", conf:"sourced", trials:[
+       {id:"Symbiotic-Lung-01", phase:"3", ind:"1L NSCLC, both histologies, + chemo vs pembrolizumab + chemo", status:"Enrolling · n≈1,500 · dual PFS/OS", countries:["Multiregional"], conf:"inferred"},
+       {id:"NCT07227298", phase:"1b/2", ind:"Advanced NSCLC, ADC combinations", status:"Recruiting · 72 sites", countries:["United States","China","France","Germany","Italy","Japan","Puerto Rico","Spain","Taiwan"], conf:"sourced"},
+       {id:"3SBio China Phase 3", phase:"3", ind:"1L NSCLC (China programme)", status:"Ongoing", countries:["China"], conf:"inferred"}
+     ]}
+   ]},
+   {name:"Hengrui", hq:"Lianyungang", assets:[
+     {name:"Trastuzumab rezetecan", alt:"SHR-A1811", modality:"ADC", target:"HER2", phase:"3", ind:"Breast, NSCLC, gastric", status:"Approved in China 2025; multiple Phase 3", conf:"inferred"},
+     {name:"SHR-A1921", modality:"ADC", target:"TROP2", phase:"3", ind:"Breast, NSCLC, ovarian", status:"Phase 3", conf:"inferred"},
+     {name:"SHR-A1904", modality:"ADC", target:"CLDN18.2", phase:"3", ind:"Gastric, pancreatic", status:"Phase 3", conf:"inferred"}
+   ]},
+   {name:"Kelun-Biotech", hq:"Chengdu", assets:[
+     {name:"Sacituzumab tirumotecan", alt:"SKB264 / MK-2870", modality:"ADC", target:"TROP2", phase:"3", ind:"NSCLC, breast, endometrial", status:"Approved in China; Merck global Phase 3 programme", licensee:"Merck, ex-China", conf:"inferred"},
+     {name:"A166", modality:"ADC", target:"HER2", phase:"3", ind:"HER2+ breast", status:"Phase 3 in China", conf:"inferred"}
+   ]},
+   {name:"Innovent", hq:"Suzhou", assets:[
+     {name:"IBI363", modality:"Bispecific antibody", target:"PD-1 × IL-2α-biased", phase:"3", ind:"Squamous NSCLC, colorectal, melanoma", status:"Phase 3", conf:"inferred"},
+     {name:"IBI343", modality:"ADC", target:"CLDN18.2", phase:"3", ind:"Gastric, pancreatic", status:"Phase 3", conf:"inferred"}
+   ]}
+ ]},
+ {country:"United States", companies:[
+   {name:"AbbVie", hq:"North Chicago, IL", assets:[
+     {name:"Telisotuzumab adizutecan", alt:"Temab-A / ABBV-400", modality:"ADC", target:"c-Met", phase:"3", ind:"Colorectal, NSCLC", status:"Phase 3", conf:"inferred"},
+     {name:"Etentamig", alt:"ABBV-383", modality:"Bispecific T-cell engager", target:"BCMA × CD3", phase:"3", ind:"Multiple myeloma", status:"Phase 3", conf:"inferred"},
+     {name:"ABBV-706", modality:"ADC", target:"SEZ6", phase:"2", ind:"SCLC, neuroendocrine", status:"Phase 2", conf:"inferred"}
+   ]},
+   {name:"Pfizer", hq:"New York, NY", assets:[
+     {name:"Sigvotatug vedotin", alt:"PF-08046049", modality:"ADC", target:"Integrin β6", phase:"3", ind:"NSCLC", status:"Phase 3", conf:"inferred"},
+     {name:"Mevrometostat", alt:"PF-06821497", modality:"Small molecule", target:"EZH2", phase:"3", ind:"mCRPC", status:"Phase 3", conf:"inferred"},
+     {name:"PF-08046054", alt:"SGN-PDL1V", modality:"ADC", target:"PD-L1", phase:"1/2", ind:"Solid tumours", status:"Phase 1/2, including combinations with PF-08634404", conf:"sourced"}
+   ]},
+   {name:"Merck", hq:"Rahway, NJ", assets:[
+     {name:"MK-1084", modality:"Small molecule", target:"KRAS G12C", phase:"3", ind:"NSCLC, colorectal", status:"Phase 3 with pembrolizumab", conf:"inferred"},
+     {name:"Bomedemstat", alt:"MK-3543", modality:"Small molecule", target:"LSD1", phase:"3", ind:"Essential thrombocythaemia", status:"Phase 3", conf:"inferred"}
+   ]},
+   {name:"Bristol Myers Squibb", hq:"Princeton, NJ", assets:[
+     {name:"Golcadomide", alt:"CC-99282", modality:"CELMoD", target:"Ikaros / Aiolos", phase:"3", ind:"Lymphoma", status:"Phase 3", conf:"inferred"},
+     {name:"Mezigdomide", alt:"CC-92480", modality:"CELMoD", target:"Ikaros / Aiolos", phase:"3", ind:"Multiple myeloma", status:"Phase 3", conf:"inferred"},
+     {name:"BMS-986365", modality:"Small molecule", target:"AR degrader", phase:"3", ind:"mCRPC", status:"Phase 3", conf:"inferred"}
+   ]},
+   {name:"Amgen", hq:"Thousand Oaks, CA", assets:[
+     {name:"Xaluritamig", alt:"AMG 509", modality:"Bispecific T-cell engager", target:"STEAP1 × CD3", phase:"3", ind:"mCRPC", status:"Phase 3", conf:"inferred"},
+     {name:"Bemarituzumab", modality:"Monoclonal antibody", target:"FGFR2b", phase:"3", ind:"1L gastric", status:"Phase 3 FORTITUDE-101 read out", conf:"inferred"}
+   ]},
+   {name:"Revolution Medicines", hq:"Redwood City, CA", assets:[
+     {name:"Daraxonrasib", alt:"RMC-6236", modality:"Small molecule", target:"RAS(ON) multi-selective", phase:"3", ind:"Pancreatic, NSCLC", status:"Phase 3", conf:"inferred"},
+     {name:"Elironrasib", alt:"RMC-6291", modality:"Small molecule", target:"RAS(ON) G12C", phase:"2", ind:"NSCLC, colorectal", status:"Phase 1/2", conf:"inferred"},
+     {name:"Zoldonrasib", alt:"RMC-9805", modality:"Small molecule", target:"RAS(ON) G12D", phase:"1", ind:"Pancreatic, NSCLC", status:"Phase 1", conf:"inferred"}
+   ]}
+ ]},
+ {country:"Germany", companies:[
+   {name:"BioNTech", hq:"Mainz", assets:[
+     {name:"Pumitamig", alt:"BNT327 / BMS-986545", modality:"Bispecific antibody", target:"PD-L1 × VEGF-A", phase:"3", ind:"SCLC, NSCLC, TNBC", status:"Phase 3 ROSETTA programme with BMS", licensee:"Co-developed with BMS", note:"Originated at Biotheus (Zhuhai, China); BioNTech acquired Biotheus in 2025", conf:"sourced", trials:[
+       {id:"ROSETTA Lung-01 · NCT06712355", phase:"3", ind:"1L extensive-stage SCLC + chemo vs atezolizumab + chemo", status:"Recruiting", countries:["United States","United Kingdom","Türkiye","China","South Korea","Australia"], conf:"sourced"},
+       {id:"ROSETTA Lung-02 · NCT06712316", phase:"2/3", ind:"1L NSCLC + chemo vs pembrolizumab + chemo", status:"Phase 3 part enrolling · Ph2 cORR 68.4% sq / 57.1% non-sq", countries:["Multiregional"], conf:"inferred"}
+     ]},
+     {name:"BNT113", modality:"mRNA cancer vaccine", target:"HPV16 E6 / E7", phase:"2", ind:"HPV16-positive head and neck", status:"Phase 2/3", conf:"inferred"},
+     {name:"BNT116", modality:"mRNA cancer vaccine", target:"NSCLC antigens", phase:"2", ind:"NSCLC", status:"Phase 2", conf:"inferred"}
+   ]},
+   {name:"Boehringer Ingelheim", hq:"Ingelheim", assets:[
+     {name:"Zongertinib", modality:"Small molecule", target:"HER2 TKI", phase:"3", ind:"HER2-mutant NSCLC", status:"US accelerated approval 2025; Phase 3 ongoing", conf:"inferred"},
+     {name:"Brigimadlin", modality:"Small molecule", target:"MDM2–p53", phase:"3", ind:"Dedifferentiated liposarcoma", status:"Phase 3", conf:"inferred"},
+     {name:"Obrixtamig", alt:"BI 764532", modality:"Bispecific T-cell engager", target:"DLL3 × CD3", phase:"2", ind:"SCLC, neuroendocrine", status:"Phase 2", conf:"inferred"}
+   ]},
+   {name:"Merck KGaA", hq:"Darmstadt", assets:[
+     {name:"Precemtabart tocentecan", alt:"M9140", modality:"ADC", target:"CEACAM5", phase:"2", ind:"Colorectal", status:"Phase 2", conf:"inferred"},
+     {name:"Tuvusertib", alt:"M1774", modality:"Small molecule", target:"ATR", phase:"2", ind:"Solid tumours", status:"Phase 2", conf:"inferred"}
+   ]}
+ ]},
+ {country:"United Kingdom", companies:[
+   {name:"AstraZeneca", hq:"Cambridge", assets:[
+     {name:"Volrustomig", alt:"MEDI5752", modality:"Bispecific antibody", target:"PD-1 × CTLA-4", phase:"3", ind:"NSCLC, cervical, head and neck", status:"Phase 3", conf:"inferred"},
+     {name:"Rilvegostomig", alt:"AZD2936", modality:"Bispecific antibody", target:"PD-1 × TIGIT", phase:"3", ind:"NSCLC, biliary", status:"Phase 3", conf:"inferred"},
+     {name:"Saruparib", alt:"AZD5305", modality:"Small molecule", target:"PARP1-selective", phase:"3", ind:"Breast, prostate", status:"Phase 3", conf:"inferred"}
+   ]},
+   {name:"GSK", hq:"London", assets:[
+     {name:"Belantamab mafodotin", modality:"ADC", target:"BCMA", phase:"3", ind:"Multiple myeloma", status:"DREAMM-7 / -8 positive; re-approved 2025", conf:"inferred"},
+     {name:"Cobolimab", modality:"Monoclonal antibody", target:"TIM-3", phase:"3", ind:"NSCLC", status:"Phase 3 COSTAR Lung", conf:"inferred"}
+   ]},
+   {name:"Bicycle Therapeutics", hq:"Cambridge", assets:[
+     {name:"Zelenectide pevedotin", alt:"BT8009", modality:"Bicycle toxin conjugate", target:"Nectin-4", phase:"3", ind:"Urothelial", status:"Phase 2/3 Duravelo-2", conf:"inferred"}
+   ]}
+ ]},
+ {country:"Switzerland", companies:[
+   {name:"Roche", hq:"Basel", assets:[
+     {name:"Giredestrant", modality:"Small molecule", target:"Oestrogen receptor (SERD)", phase:"3", ind:"ER-positive breast", status:"Phase 3 programme", conf:"inferred"},
+     {name:"Divarasib", alt:"GDC-6036", modality:"Small molecule", target:"KRAS G12C", phase:"3", ind:"NSCLC, colorectal", status:"Phase 3", conf:"inferred"}
+   ]},
+   {name:"Novartis", hq:"Basel", assets:[
+     {name:"Pelabresib", modality:"Small molecule", target:"BET", phase:"3", ind:"Myelofibrosis", status:"Phase 3 MANIFEST-2", conf:"inferred"},
+     {name:"225Ac-PSMA-617", alt:"AAA817", modality:"Radioligand", target:"PSMA", phase:"2", ind:"mCRPC", status:"Phase 1/2", conf:"inferred"}
+   ]}
+ ]},
+ {country:"Denmark", companies:[
+   {name:"Genmab", hq:"Copenhagen", assets:[
+     {name:"Rinatabart sesutecan", alt:"Rina-S", modality:"ADC", target:"FRα", phase:"3", ind:"Ovarian, endometrial", status:"Phase 3", conf:"inferred"},
+     {name:"Acasunlimab", alt:"GEN1046", modality:"Bispecific antibody", target:"PD-L1 × 4-1BB", phase:"3", ind:"NSCLC", status:"Phase 3 ABBIL1TY", conf:"inferred"}
+   ]}
+ ]},
+ {country:"Netherlands", companies:[
+   {name:"Merus", hq:"Utrecht", assets:[
+     {name:"Petosemtamab", alt:"MCLA-158", modality:"Bispecific antibody", target:"EGFR × LGR5", phase:"3", ind:"Head and neck, colorectal", status:"Phase 3", conf:"inferred"},
+     {name:"MCLA-129", modality:"Bispecific antibody", target:"EGFR × c-Met", phase:"2", ind:"NSCLC", status:"Phase 1/2", conf:"inferred"}
+   ]}
+ ]},
+ {country:"Spain", companies:[
+   {name:"PharmaMar", hq:"Madrid", assets:[
+     {name:"Lurbinectedin", modality:"Small molecule", target:"RNA polymerase II", phase:"3", ind:"SCLC", status:"Approved; Phase 3 IMforte positive 2025", licensee:"Jazz, US", conf:"inferred"},
+     {name:"Ecubectedin", alt:"PM14", modality:"Small molecule", target:"DNA minor groove", phase:"2", ind:"Solid tumours", status:"Phase 2", conf:"inferred"}
+   ]}
+ ]},
+ {country:"Japan", companies:[
+   {name:"Daiichi Sankyo", hq:"Tokyo", assets:[
+     {name:"Ifinatamab deruxtecan", alt:"I-DXd", modality:"ADC", target:"B7-H3", phase:"3", ind:"SCLC", status:"Phase 3 IDeate-Lung02", licensee:"Co-developed with Merck", conf:"inferred"},
+     {name:"Raludotatug deruxtecan", alt:"R-DXd", modality:"ADC", target:"CDH6", phase:"3", ind:"Ovarian", status:"Phase 3 REJOICE-Ovarian01", licensee:"Co-developed with Merck", conf:"inferred"},
+     {name:"Patritumab deruxtecan", alt:"HER3-DXd", modality:"ADC", target:"HER3", phase:"3", ind:"EGFR-mutant NSCLC, breast", status:"Phase 3", licensee:"Co-developed with Merck", conf:"inferred"}
+   ]},
+   {name:"Eisai", hq:"Tokyo", assets:[
+     {name:"Farletuzumab ecteribulin", alt:"MORAb-202", modality:"ADC", target:"FRα", phase:"2", ind:"Ovarian, NSCLC", status:"Phase 2 with BMS", licensee:"Co-developed with BMS", conf:"inferred"},
+     {name:"E7386", modality:"Small molecule", target:"CBP / β-catenin", phase:"1/2", ind:"HCC, endometrial", status:"Phase 1/2", conf:"inferred"}
+   ]},
+   {name:"Astellas", hq:"Tokyo", assets:[
+     {name:"ASP3082", modality:"Protein degrader", target:"KRAS G12D", phase:"1", ind:"Pancreatic, colorectal, NSCLC", status:"Phase 1", conf:"inferred"}
+   ]}
+ ]},
+ {country:"South Korea", companies:[
+   {name:"Yuhan", hq:"Seoul", assets:[
+     {name:"Lazertinib", modality:"Small molecule", target:"EGFR TKI", phase:"3", ind:"EGFR-mutant NSCLC", status:"Approved 2024 with amivantamab; Phase 3 ongoing", licensee:"Johnson & Johnson, ex-Korea", conf:"inferred"},
+     {name:"YH32367", alt:"ABL105", modality:"Bispecific antibody", target:"HER2 × 4-1BB", phase:"1/2", ind:"HER2-positive solid tumours", status:"Phase 1/2", conf:"inferred"}
+   ]},
+   {name:"LigaChem Biosciences", hq:"Daejeon", assets:[
+     {name:"LCB84", modality:"ADC", target:"TROP2", phase:"1/2", ind:"Solid tumours", status:"Phase 1/2", conf:"inferred"},
+     {name:"LCB71", alt:"CS5001", modality:"ADC", target:"ROR1", phase:"1", ind:"Lymphoma, solid tumours", status:"Phase 1", conf:"inferred"}
+   ]},
+   {name:"ABL Bio", hq:"Seongnam", assets:[
+     {name:"Givastomig", alt:"ABL111 / TJ033721", modality:"Bispecific antibody", target:"CLDN18.2 × 4-1BB", phase:"2", ind:"Gastric", status:"Phase 1/2 with I-Mab", conf:"inferred"},
+     {name:"Ragistomig", alt:"ABL503", modality:"Bispecific antibody", target:"PD-L1 × 4-1BB", phase:"1", ind:"Solid tumours", status:"Phase 1", conf:"inferred"}
+   ]}
+ ]},
+ {country:"Australia", companies:[
+   {name:"Telix Pharmaceuticals", hq:"Melbourne", assets:[
+     {name:"TLX591", alt:"177Lu-rosopatamab tetraxetan", modality:"Radio-antibody conjugate", target:"PSMA", phase:"3", ind:"mCRPC", status:"Phase 3 ProstACT GLOBAL", conf:"inferred"},
+     {name:"TLX101", modality:"Radiotherapeutic", target:"LAT1", phase:"2", ind:"Glioblastoma", status:"Phase 2", conf:"inferred"}
+   ]}
+ ]},
+ {country:"Canada", companies:[
+   {name:"Zymeworks", hq:"Vancouver", assets:[
+     {name:"Zanidatamab", modality:"Bispecific antibody", target:"HER2 biparatopic", phase:"3", ind:"Biliary, gastric, breast", status:"US approval 2024 in biliary; Phase 3 ongoing", licensee:"Jazz (US / EU), BeOne (Asia)", conf:"inferred"},
+     {name:"ZW191", modality:"ADC", target:"FRα", phase:"1", ind:"Ovarian, NSCLC", status:"Phase 1", conf:"inferred"}
+   ]}
+ ]}
+];
+
+const MAPW=1000, MAPH=500, BASEVB={x:0,y:14,w:1000,h:404};
+const proj=(lat,lon)=>[(lon+180)/360*MAPW,(90-lat)/180*MAPH];
+const phaseNums=p=>{const s=new Set();(String(p).match(/\d/g)||[]).forEach(d=>s.add(+d));return [...s];};
+const phaseTop=p=>Math.max(0,...phaseNums(p));
+const PHCOL={3:"var(--accent)",2:"var(--pos)",1:"var(--warn)"};
+const REGIONS=new Set(["Multiregional"]);
+const GLOBAL_FOOTPRINT=["United States","Canada","United Kingdom","Germany","France","Spain","Italy","Japan","South Korea","China","Australia"];
+
+const mapState={vb:{...BASEVB}, phases:new Set([1,2,3]), q:"", country:null, company:null, asset:null, drag:null};
+const siteState={vb:{...BASEVB}, sel:null, drag:null};
+
+function allAssets(){
+  const out=[];
+  ORIGINS.forEach(c=>c.companies.forEach(co=>co.assets.forEach(a=>out.push({...a,country:c.country,company:co.name,hq:co.hq,key:c.country+"|"+co.name+"|"+a.name}))));
+  return out;
+}
+function passes(a){
+  if(!phaseNums(a.phase).some(n=>mapState.phases.has(n)))return false;
+  if(mapState.q){const n=norm(mapState.q);if(![a.name,a.alt,a.target,a.modality,a.company,a.country,a.ind,a.licensee].some(x=>norm(x||"").includes(n)))return false;}
+  return true;
+}
+function visibleAssets(){return allAssets().filter(passes);}
+
+/* trial footprint of an asset: registry record → sourced; explicit trials → as tagged; else an
+   indicative placeholder from originator country, phase and licensing, until the registry pull runs */
+function trialsOf(a){
+  if(a.reg&&ASSETS[a.reg])return ASSETS[a.reg].trials.map(t=>({id:t.id,phase:t.phase,ind:t.ind,status:t.status,countries:t.countries.filter(c=>GEO[c]),conf:t.conf,kind:"sourced"}));
+  if(a.trials)return a.trials.map(t=>({...t,countries:t.countries.filter(c=>GEO[c]),kind:t.conf==="sourced"?"sourced":"indicative"}));
+  const top=phaseTop(a.phase), home=a.country;
+  let countries;
+  if(top>=3)countries=home==="China"?(a.licensee?["China","United States","Germany","Japan","South Korea"]:["China"]):GLOBAL_FOOTPRINT;
+  else if(top===2)countries=home==="United States"?[home]:[home,"United States"];
+  else countries=[home];
+  return [{id:a.name+" · Phase "+a.phase+" programme",phase:a.phase,ind:a.ind,status:a.status,countries,conf:"inferred",kind:"indicative"}];
+}
+
+/* ---------- shared map plumbing ---------- */
+function drawLand(svgSel){
+  let g="";
+  for(let lon=-180;lon<=180;lon+=30){const [x]=proj(0,lon);g+=`<line class="grat" x1="${x}" y1="0" x2="${x}" y2="${MAPH}"/>`;}
+  for(let lat=-60;lat<=80;lat+=30){const [,y]=proj(lat,0);g+=`<line class="grat" x1="0" y1="${y}" x2="${MAPW}" y2="${y}"/>`;}
+  const land=LAND.map(r=>`<path class="land" d="${r.map(([lon,lat],i)=>(i?"L":"M")+proj(lat,lon).map(v=>v.toFixed(1)).join(" ")).join(" ")}Z"/>`).join("");
+  $(svgSel).innerHTML=`<g class="static">${g}${land}</g><g class="marks"></g>`;
+}
+function clampVB(st){
+  const vb=st.vb;
+  vb.x=Math.max(BASEVB.x,Math.min(BASEVB.x+BASEVB.w-vb.w,vb.x));
+  vb.y=Math.max(BASEVB.y,Math.min(BASEVB.y+BASEVB.h-vb.h,vb.y));
+}
+function applyVB(svgSel,st){const vb=st.vb;$(svgSel).setAttribute("viewBox",`${vb.x} ${vb.y} ${vb.w} ${vb.h}`);}
+
+function attachMap(svgSel,wrapSel,tipSel,st,redraw,onPick,tipHTML){
+  const svg=$(svgSel), wrap=$(wrapSel), tip=$(tipSel);
+  const toSvg=(cx,cy)=>{const r=svg.getBoundingClientRect();const vb=st.vb;return [vb.x+(cx-r.left)/r.width*vb.w, vb.y+(cy-r.top)/r.height*vb.h];};
+  svg.addEventListener("wheel",e=>{
+    e.preventDefault();
+    const k=e.deltaY<0?0.85:1.18, [mx,my]=toSvg(e.clientX,e.clientY), vb=st.vb;
+    const w=Math.max(120,Math.min(BASEVB.w,vb.w*k)), h=w*BASEVB.h/BASEVB.w;
+    st.vb={x:mx-(mx-vb.x)*(w/vb.w), y:my-(my-vb.y)*(h/vb.h), w, h}; clampVB(st); applyVB(svgSel,st); redraw();
+  },{passive:false});
+  svg.addEventListener("pointerdown",e=>{if(e.button!==0)return;const m=e.target.closest(".mk");st.drag={x:e.clientX,y:e.clientY,vb:{...st.vb},moved:false,hit:m?m.dataset.country:null};svg.setPointerCapture(e.pointerId);svg.classList.add("dragging");});
+  svg.addEventListener("pointermove",e=>{
+    const d=st.drag; if(!d)return;
+    const r=svg.getBoundingClientRect(), dx=(e.clientX-d.x)/r.width*d.vb.w, dy=(e.clientY-d.y)/r.height*d.vb.h;
+    if(Math.abs(e.clientX-d.x)+Math.abs(e.clientY-d.y)>3)d.moved=true;
+    st.vb={...d.vb,x:d.vb.x-dx,y:d.vb.y-dy}; clampVB(st); applyVB(svgSel,st);
+  });
+  // pointer capture retargets pointerup to the svg, so the pick resolves from the pointerdown hit
+  const endDrag=()=>{const d=st.drag; if(!d)return; st.drag=null; svg.classList.remove("dragging"); if(!d.moved)onPick(d.hit);};
+  svg.addEventListener("pointerup",endDrag); svg.addEventListener("pointercancel",endDrag);
+  wrap.querySelector(".mapctl").addEventListener("click",e=>{
+    const z=e.target.dataset&&e.target.dataset.zoom; if(!z)return;
+    if(z==="reset"){st.vb={...BASEVB};}
+    else{const vb=st.vb,k=z==="in"?0.75:1.33,w=Math.max(120,Math.min(BASEVB.w,vb.w*k)),h=w*BASEVB.h/BASEVB.w;st.vb={x:vb.x+(vb.w-w)/2,y:vb.y+(vb.h-h)/2,w,h};}
+    clampVB(st); applyVB(svgSel,st); redraw();
+  });
+  svg.addEventListener("pointermove",e=>{
+    const m=e.target.closest(".mk"); if(!m||st.drag){tip.style.display="none";return;}
+    tip.innerHTML=tipHTML(m.dataset.country);
+    const r=wrap.getBoundingClientRect();
+    let x=e.clientX-r.left+14, y=e.clientY-r.top+14;
+    tip.style.display="block";
+    if(x+tip.offsetWidth>r.width-8)x=e.clientX-r.left-tip.offsetWidth-14;
+    if(y+tip.offsetHeight>r.height-8)y=e.clientY-r.top-tip.offsetHeight-14;
+    tip.style.left=x+"px"; tip.style.top=y+"px";
+  });
+  svg.addEventListener("pointerleave",()=>{tip.style.display="none";});
+}
+
+/* ---------- map 1: origin (countries → companies) ---------- */
+function initMap(){
+  drawLand("#map"); applyVB("#map",mapState);
+  $("#mapLegend").innerHTML=[3,2,1].map(n=>`<span class="key"><span class="sw" style="background:${PHCOL[n]}"></span>Phase ${n} most advanced</span>`).join("")+`<span class="key" style="color:var(--ink-3)">number = companies headquartered there</span>`;
+
+  const f=$("#mapFilters");
+  f.innerHTML=`<span class="flab">Phase</span>`+[1,2,3].map(n=>`<button type="button" class="fchip" data-phase="${n}" aria-pressed="true">Phase ${n}</button>`).join("")+
+    `<span class="fsep"></span><input id="mapQ" placeholder="Filter by asset, target, modality, company or country" aria-label="Filter assets">`;
+  f.addEventListener("click",e=>{
+    const b=e.target.closest(".fchip"); if(!b)return;
+    const on=b.getAttribute("aria-pressed")!=="true";
+    b.setAttribute("aria-pressed",String(on));
+    on?mapState.phases.add(+b.dataset.phase):mapState.phases.delete(+b.dataset.phase);
+    renderMap();
+  });
+  $("#mapQ").addEventListener("input",e=>{mapState.q=e.target.value.trim();renderMap();});
+
+  attachMap("#map","#mapWrap","#mapTip",mapState,renderMarks,
+    hit=>selectCountry(hit&&mapState.country!==hit?hit:null),
+    c=>{const as=visibleAssets().filter(a=>a.country===c), cos=[...new Set(as.map(a=>a.company))];
+        return `<b>${esc(c)} · ${cos.length} compan${cos.length===1?"y":"ies"}, ${as.length} asset${as.length===1?"":"s"}</b>${cos.map(co=>`${esc(co)} — ${as.filter(a=>a.company===co).map(a=>esc(a.name)).join(", ")}`).join("<br>")}<small>click to drill into companies</small>`;});
+
+  $("#dGeo").addEventListener("click",e=>{const li=e.target.closest(".ditem");if(li)selectCountry(mapState.country===li.dataset.v?null:li.dataset.v);});
+  $("#dCo").addEventListener("click",e=>{const li=e.target.closest(".ditem");if(li){mapState.company=mapState.company===li.dataset.v?null:li.dataset.v;mapState.asset=null;renderMap();}});
+  $("#dAs").addEventListener("click",e=>{const li=e.target.closest(".ditem");if(li){mapState.asset=mapState.asset===li.dataset.v?null:li.dataset.v;renderMap();}});
+  $("#dCrumb").addEventListener("click",e=>{if(e.target.closest("[data-clear]"))selectCountry(null);});
+  document.addEventListener("click",e=>{
+    const b=e.target.closest("[data-mapload]"); if(b){selectAsset(ASSETS[b.dataset.mapload],ASSETS[b.dataset.mapload].name);showTab("lookup");window.scrollTo({top:0,behavior:"smooth"});}
+  });
+
+  // map 2: trial footprint
+  drawLand("#siteMap"); applyVB("#siteMap",siteState);
+  $("#siteLegend").innerHTML=`<span class="key"><span class="sw" style="background:var(--accent)"></span>registry-sourced trials</span><span class="key"><span class="sw" style="border:1.5px dashed var(--accent);background:none"></span>indicative footprint, not yet pulled</span><span class="key" style="color:var(--ink-3)">number = trials there</span>`;
+  attachMap("#siteMap","#siteWrap","#siteTip",siteState,renderSiteMarks,
+    hit=>{siteState.sel = hit&&siteState.sel!==hit ? hit : null; renderSites();},
+    c=>{const s=siteData().find(x=>x.country===c); if(!s)return "";
+        return `<b>${esc(c)} · ${s.trials.length} trial${s.trials.length===1?"":"s"}, ${s.assets.size} asset${s.assets.size===1?"":"s"}</b>${s.trials.slice(0,6).map(t=>`${esc(t.asset.name)} — ${esc(t.id)}`).join("<br>")}${s.trials.length>6?"<br>…":""}<small>click to list them</small>`;});
+  renderMap();
+}
+
+function selectCountry(c){mapState.country=c;mapState.company=null;mapState.asset=null;renderMap();}
+
+function countryStats(){
+  const by={};
+  visibleAssets().forEach(a=>{const s=by[a.country]||(by[a.country]={country:a.country,assets:[],companies:new Set(),top:0});s.assets.push(a);s.companies.add(a.company);s.top=Math.max(s.top,phaseTop(a.phase));});
+  return Object.values(by).sort((a,b)=>b.companies.size-a.companies.size||b.assets.length-a.assets.length||a.country.localeCompare(b.country));
+}
+
+function renderMarks(){
+  const s=mapState.vb.w/BASEVB.w, k=Math.max(.45,Math.sqrt(s));
+  $("#map .marks").innerHTML=countryStats().filter(c=>GEO[c.country]).map(c=>{
+    const [lat,lon]=GEO[c.country], [x,y]=proj(lat,lon), n=c.companies.size;
+    const r=(5+3.2*Math.sqrt(n))*k, sel=mapState.country===c.country, faded=mapState.country&&!sel;
+    return `<g class="mk${sel?" sel":""}${faded?" faded":""}" data-country="${esc(c.country)}" transform="translate(${x.toFixed(1)} ${y.toFixed(1)})">
+      <circle class="halo" r="${(r*1.7).toFixed(1)}" stroke="${PHCOL[c.top]||PHCOL[1]}" stroke-width="${(1.1*k).toFixed(2)}"/>
+      <circle class="dot" r="${r.toFixed(1)}" fill="${PHCOL[c.top]||PHCOL[1]}"/>
+      <text class="cnt" y="${(2.6*k).toFixed(1)}" font-size="${(7.5*k).toFixed(1)}">${n}</text>
+      ${(sel||n>=3||s<0.6)?`<text x="${(r+4).toFixed(1)}" y="3" font-size="${(8*k).toFixed(1)}">${esc(c.country)}</text>`:""}
+    </g>`;
+  }).join("");
+}
+
+function renderMap(){
+  renderMarks();
+  const vis=visibleAssets(), cs=countryStats();
+  const cos=new Set(vis.map(a=>a.country+"|"+a.company));
+  const ph3=vis.filter(a=>phaseNums(a.phase).includes(3)).length;
+  $("#mapTiles").innerHTML=[
+    {l:"Countries<br>of origin",v:cs.length,n:cs.slice(0,4).map(c=>c.country+" "+c.companies.size).join(" · ")+(cs.length>4?" · …":"")+" companies",hero:true},
+    {l:"Originating<br>companies",v:cos.size,n:"Headquartered in those countries"},
+    {l:"Assets<br>Phase 1–3",v:vis.length,n:ph3+" with a Phase 3 study · "+(vis.length-ph3)+" earlier"},
+    {l:"In the<br>registry",v:vis.filter(a=>a.reg).length,n:"Loadable into the predictors"}
+  ].map(tileHTML).join("");
+
+  $("#dGeo").innerHTML=cs.length?cs.map(c=>`<li class="ditem" role="button" data-v="${esc(c.country)}" aria-selected="${mapState.country===c.country}">
+      <div><div class="dn"><span class="pdot" style="background:${PHCOL[c.top]||PHCOL[1]}"></span>${esc(c.country)}</div><div class="dm">${c.assets.length} asset${c.assets.length===1?"":"s"}</div></div>
+      <div class="dc"><b>${c.companies.size}</b>compan${c.companies.size===1?"y":"ies"}</div></li>`).join("")
+    :`<li class="dempty">No assets match the current filters.</li>`;
+
+  const col2=$("#dCo");
+  if(!mapState.country){col2.innerHTML=`<li class="dempty">Pick a country on the map or in the list to see the companies headquartered there.</li>`;}
+  else{
+    const inC=vis.filter(a=>a.country===mapState.country), names=[...new Set(inC.map(a=>a.company))];
+    col2.innerHTML=names.map(n=>{const as=inC.filter(a=>a.company===n), top=Math.max(...as.map(a=>phaseTop(a.phase))), p3=as.filter(a=>phaseNums(a.phase).includes(3)).length;
+      return `<li class="ditem" role="button" data-v="${esc(n)}" aria-selected="${mapState.company===n}">
+        <div><div class="dn"><span class="pdot" style="background:${PHCOL[top]}"></span>${esc(n)}<small>${esc(as[0].hq)}</small></div><div class="dm">${p3} at Phase 3 · ${[...new Set(as.map(a=>a.modality))].slice(0,3).map(esc).join(", ")}</div></div>
+        <div class="dc"><b>${as.length}</b>asset${as.length===1?"":"s"}</div></li>`;}).join("");
+  }
+
+  const col3=$("#dAs");
+  if(!mapState.company){col3.innerHTML=`<li class="dempty">${mapState.country?"Pick a company to list its assets.":"Country first, then company."}</li>`;}
+  else{
+    const as=vis.filter(a=>a.country===mapState.country&&a.company===mapState.company);
+    col3.innerHTML=as.map(a=>`<li class="ditem" role="button" data-v="${esc(a.key)}" aria-selected="${mapState.asset===a.key}">
+      <div><div class="dn"><span class="pdot" style="background:${PHCOL[phaseTop(a.phase)]}"></span>${esc(a.name)}${a.alt?`<small>/ ${esc(a.alt)}</small>`:""}${a.reg?'<span class="reg" style="font-family:var(--mono);font-size:9px;letter-spacing:.08em;text-transform:uppercase;background:var(--accent-soft);color:var(--accent);border-radius:4px;padding:1px 6px">registry</span>':""}</div>
+      <div class="dm">${esc(a.modality)} · ${esc(a.target)} · ${esc(a.ind)}</div></div>
+      <div class="dc"><b>Ph ${esc(a.phase)}</b>${confTag(a.conf)}</div></li>`).join("");
+  }
+
+  $("#dCrumb").innerHTML=`<span>Geography</span><span class="arrow">→</span><span>Company</span><span class="arrow">→</span><span>Asset</span>`+
+    (mapState.country?`<span class="arrow" style="margin-left:8px">|</span><b>${esc(mapState.country)}</b>`:"")+
+    (mapState.company?`<span class="arrow">→</span><b>${esc(mapState.company)}</b>`:"")+
+    (mapState.asset?`<span class="arrow">→</span><b>${esc(mapState.asset.split("|")[2])}</b>`:"")+
+    (mapState.country?`<button type="button" data-clear="1">Clear</button>`:"");
+
+  const d=$("#dDetail"), a=mapState.asset?vis.find(x=>x.key===mapState.asset):null;
+  if(!a){d.innerHTML="";}
+  else{
+    const reg=a.reg?ASSETS[a.reg]:null;
+    d.innerHTML=`<div class="ddetail" style="border-left-color:${PHCOL[phaseTop(a.phase)]}">
+      <h3>${esc(a.name)}${a.alt?` <em>/ ${esc(a.alt)}</em>`:""}</h3>
+      <div class="dsub">Originated by <b>${esc(a.company)}</b>, ${esc(a.hq)}, ${esc(a.country)}${a.licensee?` · ${esc(a.licensee)}`:""} ${confTag(a.conf)}</div>
+      <div class="idgrid">
+        <div class="idcell"><div class="l">Modality · target</div><div class="v">${esc(a.modality)}<small>${esc(a.target)}</small></div></div>
+        <div class="idcell"><div class="l">Most advanced phase</div><div class="v">Phase ${esc(a.phase)}</div></div>
+        <div class="idcell"><div class="l">Indications</div><div class="v" style="font-size:13px;font-weight:400;color:var(--ink-2)">${esc(a.ind)}</div></div>
+        <div class="idcell"><div class="l">Status</div><div class="v" style="font-size:13px;font-weight:400;color:var(--ink-2)">${esc(a.status)}</div></div>
+        ${a.note?`<div class="idcell"><div class="l">Note</div><div class="v" style="font-size:12.5px;font-weight:400;color:var(--ink-2)">${esc(a.note)}</div></div>`:""}
+      </div>
+      ${reg?`<button class="jump primary" data-mapload="${a.reg}" style="margin-top:0">Open ${esc(a.name)} in Asset Selection →</button>`:`<span class="map-note" style="margin:0">Not in the registry yet — add a record to <span style="font-family:var(--mono)">ASSETS</span> to score it. Trial geography below is indicative until then.</span>`}
+    </div>`;
+  }
+
+  siteState.sel=null; renderSites();
+}
+
+/* ---------- map 2: trial footprint of the current selection ---------- */
+function siteScope(){
+  const vis=visibleAssets();
+  if(mapState.asset){const a=vis.find(x=>x.key===mapState.asset);return {label:a?a.name:"the selected asset",assets:a?[a]:[]};}
+  if(mapState.company)return {label:mapState.company+"'s assets",assets:vis.filter(a=>a.country===mapState.country&&a.company===mapState.company)};
+  if(mapState.country)return {label:"assets originating in "+mapState.country,assets:vis.filter(a=>a.country===mapState.country)};
+  return {label:"all "+vis.length+" assets in view",assets:vis};
+}
+function scopeTrials(){return siteScope().assets.flatMap(a=>trialsOf(a).map(t=>({...t,asset:a})));}
+function siteData(){
+  const by={};
+  scopeTrials().forEach(t=>t.countries.forEach(c=>{
+    const s=by[c]||(by[c]={country:c,trials:[],assets:new Set(),sourced:false,top:0});
+    s.trials.push(t); s.assets.add(t.asset.key); if(t.kind==="sourced")s.sourced=true; s.top=Math.max(s.top,phaseTop(t.phase));
+  }));
+  return Object.values(by).sort((a,b)=>b.trials.length-a.trials.length);
+}
+function renderSiteMarks(){
+  const s=siteState.vb.w/BASEVB.w, k=Math.max(.45,Math.sqrt(s));
+  $("#siteMap .marks").innerHTML=siteData().filter(c=>GEO[c.country]).map(c=>{
+    const [lat,lon]=GEO[c.country], [x,y]=proj(lat,lon), n=c.trials.length;
+    const r=(4.5+2.8*Math.sqrt(n))*k, sel=siteState.sel===c.country, faded=siteState.sel&&!sel, ind=!c.sourced;
+    return `<g class="mk${ind?" multi":""}${sel?" sel":""}${faded?" faded":""}" data-country="${esc(c.country)}" transform="translate(${x.toFixed(1)} ${y.toFixed(1)})">
+      ${c.top>=3?`<circle class="halo" r="${(r*1.7).toFixed(1)}" stroke="var(--accent)" stroke-width="${(1.1*k).toFixed(2)}"/>`:""}
+      <circle class="dot" r="${r.toFixed(1)}" fill="var(--accent)" stroke="var(--accent)"/>
+      <text class="cnt" y="${(2.6*k).toFixed(1)}" font-size="${(7.5*k).toFixed(1)}" ${ind?'style="fill:var(--accent)"':""}>${n}</text>
+      ${(sel||n>=3||s<0.6||REGIONS.has(c.country))?`<text x="${(r+4).toFixed(1)}" y="3" font-size="${(8*k).toFixed(1)}">${esc(c.country)}${c.country==="Multiregional"?" — countries not yet posted":""}</text>`:""}
+    </g>`;
+  }).join("");
+}
+function renderSites(){
+  renderSiteMarks();
+  const sc=siteScope(), ts=scopeTrials(), data=siteData();
+  const countries=data.filter(c=>!REGIONS.has(c.country)).length;
+  const srcN=ts.filter(t=>t.kind==="sourced").length, ph3=ts.filter(t=>phaseNums(t.phase).includes(3)).length;
+  $("#siteHead").textContent=`Where ${sc.label.replace(/^all /,"")} ${sc.assets.length===1?"is":"are"} in trial`;
+  $("#siteLede").textContent=sc.assets.length
+    ? `Trial geography for ${sc.label}: ${ts.length} stud${ts.length===1?"y":"ies"} across ${countries} countr${countries===1?"y":"ies"}. ${srcN} ${srcN===1?"is":"are"} registry-sourced; ${ts.length-srcN} ${ts.length-srcN===1?"is an":"are"} indicative footprint${ts.length-srcN===1?"":"s"} awaiting the registry pull. Narrow the scope by picking a country, company or asset above.`
+    : "Nothing in scope — adjust the filters above.";
+  $("#siteTiles").innerHTML=[
+    {l:"Studies<br>in scope",v:ts.length,n:ph3+" at Phase 3 · "+(ts.length-ph3)+" earlier",hero:true},
+    {l:"Countries<br>with a site",v:countries,n:data.some(c=>REGIONS.has(c.country))?"plus studies with countries not yet posted":"All geographies enumerated"},
+    {l:"Registry-sourced<br>studies",v:srcN,n:srcN===ts.length?"Everything in scope is sourced":"Rest are indicative placeholders"},
+    {l:"Assets<br>in scope",v:sc.assets.length,n:sc.assets.slice(0,3).map(a=>a.name).join(" · ")+(sc.assets.length>3?" · …":"")}
+  ].map(tileHTML).join("");
+
+  const d=$("#siteDetail");
+  if(!siteState.sel){d.className="map-empty";d.textContent="Nothing selected yet — click a marker on the trial map.";}
+  else{
+    const s=data.find(x=>x.country===siteState.sel);
+    d.className="";
+    d.innerHTML=`<div class="eyebrow" style="margin-bottom:6px">${esc(siteState.sel)}${REGIONS.has(siteState.sel)?" — countries not yet posted":""} · ${s?s.trials.length:0} stud${s&&s.trials.length===1?"y":"ies"}</div>`+
+      (s?s.trials.map(t=>`<div class="mtrial"><div class="t1"><span>${esc(t.asset.name)} — ${esc(t.id)}</span><span class="ph">Phase ${esc(t.phase)}</span></div>
+        <div class="t2">${esc(t.ind)}</div><div class="t3">${esc(t.status)} · ${t.countries.length} geograph${t.countries.length===1?"y":"ies"} <span class="conf ${t.kind==="sourced"?"sourced":"unresolved"}">${t.kind}</span></div></div>`).join(""):"");
+  }
+
+}
+
+/* =====================================================================
+   INIT
+   ===================================================================== */
+buildControls("#ctlApproval",["cq","ci"],true);
+buildControls("#ctlCommercial",["share","ci"],true);
+drawFeatureTable();
+drawArch();
+drawRegistry();
+drawPlatformHeader();
+drawLookup(null,"");
+initMap();
+showTab(location.hash.slice(1)||"map");
+</script>
+</body>
+</html>
