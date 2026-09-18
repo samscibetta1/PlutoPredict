@@ -12,7 +12,7 @@
   --bg:#f4f2ee; --panel:#ffffff; --panel-2:#faf9f6; --ink:#16181c; --ink-2:#4a4f58;
   --ink-3:#7b828d; --line:#e0ddd6; --line-2:#cfcbc2;
   --accent:#1d4ed8; --accent-soft:#e6ecfd;
-  --pos:#15736a; --warn:#b4601a; --neg:#a52b28;
+  --pos:#15736a; --warn:#b4601a; --neg:#a52b28; --gold:#c99a12;
   --grid:#e8e5de;
   --serif:"Newsreader",Georgia,serif;
   --sans:"IBM Plex Sans",system-ui,-apple-system,sans-serif;
@@ -23,14 +23,14 @@
     --bg:#101215; --panel:#191c21; --panel-2:#1f232a; --ink:#eceef2; --ink-2:#a9b1bd;
     --ink-3:#7c8492; --line:#2a2f37; --line-2:#3a414b;
     --accent:#7da2ff; --accent-soft:#1e2a44;
-    --pos:#4fd1b8; --warn:#e0a45e; --neg:#f08b86; --grid:#252a31;
+    --pos:#4fd1b8; --warn:#e0a45e; --neg:#f08b86; --gold:#e6c14a; --grid:#252a31;
   }
 }
 :root[data-theme="dark"]{
   --bg:#101215; --panel:#191c21; --panel-2:#1f232a; --ink:#eceef2; --ink-2:#a9b1bd;
   --ink-3:#7c8492; --line:#2a2f37; --line-2:#3a414b;
   --accent:#7da2ff; --accent-soft:#1e2a44;
-  --pos:#4fd1b8; --warn:#e0a45e; --neg:#f08b86; --grid:#252a31;
+  --pos:#4fd1b8; --warn:#e0a45e; --neg:#f08b86; --gold:#e6c14a; --grid:#252a31;
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
@@ -52,16 +52,18 @@ h1 em{font-style:italic;color:var(--ink-2)}
 /* tab nav */
 .tabnav{position:sticky;top:0;z-index:20;background:var(--bg);padding:8px 0 10px;margin-bottom:22px;
   display:flex;gap:6px;flex-wrap:wrap;border-bottom:1px solid var(--line)}
-.navtab{appearance:none;background:var(--panel);border:1px solid var(--line);border-radius:8px;
-  font-family:var(--sans);font-size:13.5px;font-weight:500;color:var(--ink-2);
+.navtab{--tc:var(--accent);appearance:none;border:1px solid color-mix(in srgb,var(--tc) 35%,var(--line));border-radius:8px;
+  background:color-mix(in srgb,var(--tc) 10%,var(--panel));
+  font-family:var(--sans);font-size:13.5px;font-weight:500;color:var(--tc);
   padding:9px 15px;cursor:pointer;display:flex;align-items:baseline;gap:8px;white-space:nowrap;
   transition:background .15s,border-color .15s,color .15s}
-.navtab:hover{border-color:var(--line-2);color:var(--ink)}
-.navtab[aria-selected=true]{background:var(--accent-soft);border-color:transparent;color:var(--accent);font-weight:600}
-.navtab.pred{background:var(--panel-2);border-color:var(--line-2)}
-.navtab.pred .pn{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--accent)}
-.navtab.pred[aria-selected=true]{background:var(--accent);border-color:var(--accent);color:#fff}
-.navtab.pred[aria-selected=true] .pn{color:#fff}
+.navtab[data-g=blue]{--tc:var(--accent)}
+.navtab[data-g=green]{--tc:var(--pos)}
+.navtab[data-g=yellow]{--tc:var(--gold)}
+.navtab:hover{background:color-mix(in srgb,var(--tc) 20%,var(--panel));border-color:var(--tc)}
+.navtab[aria-selected=true]{background:var(--tc);border-color:var(--tc);color:#fff;font-weight:600}
+.navtab[data-g=yellow][aria-selected=true]{color:var(--ink)}
+.navtab .pn{font-family:var(--mono);font-size:11px;font-weight:600;color:inherit;opacity:.85}
 @media (max-width:700px){
   .tabnav{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
   .tabnav::-webkit-scrollbar{display:none}
@@ -383,12 +385,13 @@ footer{margin-top:44px;padding-top:18px;border-top:1px solid var(--line);font-si
 </header>
 
 <nav class="tabnav" id="tabnav" role="tablist" aria-label="Sections">
-  <button class="navtab" role="tab" data-panel="map">Asset Map</button>
-  <button class="navtab" role="tab" data-panel="lookup">Asset Selection</button>
-  <button class="navtab" role="tab" data-panel="architecture">Data Architecture</button>
-  <button class="navtab" role="tab" data-panel="summary">Prediction Summary</button>
-  <button class="navtab pred" role="tab" data-panel="approval"><span class="pn">1)</span> Approval predictor</button>
-  <button class="navtab pred" role="tab" data-panel="commercial"><span class="pn">2)</span> Commercial predictor</button>
+  <button class="navtab" role="tab" data-panel="map" data-g="blue">Asset Map</button>
+  <button class="navtab" role="tab" data-panel="lookup" data-g="blue">Asset Selection</button>
+  <button class="navtab" role="tab" data-panel="architecture" data-g="green"><span class="pn">1)</span> Data Architecture</button>
+  <button class="navtab" role="tab" data-panel="assetdata" data-g="green"><span class="pn">2)</span> Asset Data Summary</button>
+  <button class="navtab" role="tab" data-panel="summary" data-g="yellow">Prediction Summary</button>
+  <button class="navtab" role="tab" data-panel="approval" data-g="yellow"><span class="pn">1)</span> Approval predictor</button>
+  <button class="navtab" role="tab" data-panel="commercial" data-g="yellow"><span class="pn">2)</span> Commercial predictor</button>
 </nav>
 
 <div class="ctx" id="ctx" hidden></div>
@@ -475,6 +478,26 @@ footer{margin-top:44px;padding-top:18px;border-top:1px solid var(--line);font-si
 
 </div>
 
+<!-- ============ 02b ASSET DATA SUMMARY ============ -->
+<div class="panel" id="p-assetdata" role="tabpanel" aria-label="Asset Data Summary" hidden>
+
+  <section>
+    <h2 id="resHead">Asset Data Summary</h2>
+    <p class="lede" id="resLede">What each data domain actually returned for the loaded asset — the specific value, the source it came from, and how confident the record is. Where the pull could not resolve an attribute it says so rather than filling the gap.</p>
+    <div class="rule"></div>
+    <div class="noasset">
+      <h3>No asset loaded</h3>
+      <p>Load a molecule on the Asset Selection tab and each data domain fills with what the sources returned for it.</p>
+      <button class="jump primary" data-goto="lookup" style="margin-top:0">Go to asset selection →</button>
+    </div>
+    <div class="needs-asset">
+      <div class="res-legend"><span class="conf sourced" style="margin-left:0">sourced</span> backed by a primary document or registry record &nbsp; <span class="conf inferred" style="margin-left:0">inferred</span> implied by a source but not stated numerically &nbsp; <span class="conf unresolved" style="margin-left:0">unresolved</span> the pull returned nothing usable</div>
+      <div class="res" id="resolved"></div>
+    </div>
+  </section>
+
+</div>
+
 <!-- ============ 03 PREDICTION SUMMARY ============ -->
 <div class="panel" id="p-summary" role="tabpanel" aria-label="Prediction Summary" hidden>
 
@@ -536,21 +559,6 @@ footer{margin-top:44px;padding-top:18px;border-top:1px solid var(--line);font-si
       <div class="scroll"><table class="arch" id="archTbl"><thead><tr>
         <th>Data domain</th><th>Source dataset</th><th>Attribute category</th><th>Attributes / raw features</th>
       </tr></thead><tbody></tbody></table></div>
-    </div>
-  </section>
-
-  <section>
-    <h2 id="resHead">Resolved for this asset</h2>
-    <p class="lede" id="resLede">What each data domain actually returned for the loaded asset — the specific value, the source it came from, and how confident the record is. Where the pull could not resolve an attribute it says so rather than filling the gap.</p>
-    <div class="rule"></div>
-    <div class="noasset">
-      <h3>No asset loaded</h3>
-      <p>Load a molecule on the Asset Selection tab and each domain below fills with what the sources returned for it.</p>
-      <button class="jump primary" data-goto="lookup" style="margin-top:0">Go to asset selection →</button>
-    </div>
-    <div class="needs-asset">
-      <div class="res-legend"><span class="conf sourced" style="margin-left:0">sourced</span> backed by a primary document or registry record &nbsp; <span class="conf inferred" style="margin-left:0">inferred</span> implied by a source but not stated numerically &nbsp; <span class="conf unresolved" style="margin-left:0">unresolved</span> the pull returned nothing usable</div>
-      <div class="res" id="resolved"></div>
     </div>
   </section>
 
@@ -1308,7 +1316,7 @@ function drawStatic(){
 }
 
 function drawResolved(A){
-  $("#resHead").textContent=`Resolved for ${A.name} · as of ${A.resolvedAsOf||A.predDate}`;
+  $("#resHead").textContent=`Asset Data Summary · ${A.name} · as of ${A.resolvedAsOf||A.predDate}`;
   const n=A.resolved.reduce((a,d)=>a+d.rows.length,0);
   const by={sourced:0,inferred:0,unresolved:0};
   A.resolved.forEach(d=>d.rows.forEach(r=>{by[r[3]]=(by[r[3]]||0)+1;}));
@@ -1356,12 +1364,12 @@ document.addEventListener("click",e=>{
 /* =====================================================================
    TAB NAV
    ===================================================================== */
-const PANELS=["map","lookup","architecture","summary","approval","commercial"];
+const PANELS=["map","lookup","architecture","assetdata","summary","approval","commercial"];
 function showTab(id){
   if(!PANELS.includes(id))id="map";
   PANELS.forEach(p=>{$("#p-"+p).hidden = p!==id;});
   $$("#tabnav .navtab").forEach(b=>b.setAttribute("aria-selected",String(b.dataset.panel===id)));
-  $("#ctx").hidden = !current || !["summary","approval","commercial"].includes(id);
+  $("#ctx").hidden = !current || !["assetdata","summary","approval","commercial"].includes(id);
   if(location.hash.slice(1)!==id){try{history.replaceState(null,"","#"+id);}catch(e){}}
 }
 $$("#tabnav .navtab").forEach((b,i,all)=>{
